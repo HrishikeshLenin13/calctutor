@@ -405,3 +405,22 @@ function regressionPlan(text: string, pairs: [number, number][]): Interpret {
     ],
   };
 }
+
+function binomialPlan(text: string, n: number, p: number, x: number, cdf: boolean): Interpret {
+  if (!(n >= 0) || !(p >= 0 && p <= 1) || !(x >= 0)) return { error: "Binomial needs n trials, probability p between 0 and 1, and x successes." };
+  return {
+    title: cdf ? "Binomial cumulative probability" : "Binomial probability",
+    problem: text,
+    steps: [
+      wake(),
+      {
+        title: cdf ? "Open binomcdf(" : "Open binompdf(",
+        why: cdf
+          ? "2nd, vars opens DISTR. binomcdf( is letter B. B is printed on the apps key, so press apps. It adds the probabilities from 0 through x."
+          : "2nd, vars opens DISTR. binompdf( is letter A, not option 4. A is printed on the math key, so press math. The arguments are n, p, x.",
+        keys: [stroke("2nd", "2nd"), stroke("vars", "vars"), stroke(cdf ? "apps" : "math", cdf ? "apps" : "math"), ...numberKeys(n), stroke("comma", ","), ...numberKeys(p), stroke("comma", ","), ...numberKeys(x), stroke("rparen", ")"), stroke("enter", "enter")],
+      },
+      { title: "Read the probability", why: "The result is a probability between 0 and 1.", keys: [] },
+    ],
+  };
+}
