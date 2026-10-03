@@ -483,3 +483,62 @@ function listKey(state: Os, key: KeyId): Os {
   const text = PRIMARY[key];
   return text ? typeInto(state, text) : state;
 }
+
+function catalogKey(state: Os, key: KeyId): Os {
+  const { items, index } = catalogView(state);
+  if (key === "up") return { ...state, catalogI: Math.max(0, index - 1) };
+  if (key === "down") return { ...state, catalogI: Math.min(items.length - 1, index + 1) };
+  if (key === "enter" && items[index]) return paste(state, items[index].action.slice(6));
+  if (key === "del") return { ...state, catalogQ: state.catalogQ.slice(0, -1), catalogI: 0 };
+  return state;
+}
+
+function graphKey(state: Os, key: KeyId): Os {
+  if (state.plot !== "FUNC") return state;
+  if (state.bound && key === "enter") return commitBound(state);
+  if (key === "left" || key === "right" || key === "up" || key === "down") {
+    let trace = state.trace ?? 47;
+    let traceEq = state.traceEq;
+    if (key === "left") trace = Math.max(0, (state.traceX !== null ? xToIndex(state, state.traceX) : trace) - 1);
+    if (key === "right") trace = Math.min(94, (state.traceX !== null ? xToIndex(state, state.traceX) : trace) + 1);
+    if (key === "up") traceEq = Math.max(0, traceEq - 1);
+    if (key === "down") traceEq = Math.min(2, traceEq + 1);
+    return { ...state, screen: "graph", trace, traceEq, traceX: null };
+  }
+  return state;
+}
+
+function tableKey(state: Os, key: KeyId): Os {
+  if (key === "up") return { ...state, tableOffset: state.tableOffset - 1 };
+  if (key === "down") return { ...state, tableOffset: state.tableOffset + 1 };
+  return state;
+}
+
+function resultKey(state: Os, key: KeyId): Os {
+  if (!state.results) return home(state);
+  if (key === "up") return { ...state, results: { ...state.results, top: Math.max(0, state.results.top - 1) } };
+  if (key === "down") return { ...state, results: { ...state.results, top: state.results.top + 1 } };
+  if (key === "enter") return home(state);
+  return state;
+}
+
+function promptKey(state: Os, key: KeyId): Os {
+  if (!state.prompt) return state;
+  if (key === "enter") return finishPrompt(state);
+  if (key === "del") return { ...state, prompt: { ...state.prompt, value: state.prompt.value.slice(0, -1) } };
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function wizardKey(state: Os, key: KeyId): Os {
+  if (!state.wizard) return state;
+  const fields = state.wizard.kind === "1var" ? 2 : 3;
+  if (key === "up") return { ...state, wizard: { ...state.wizard, field: (state.wizard.field + fields - 1) % fields } };
+  if (key === "down") return { ...state, wizard: { ...state.wizard, field: (state.wizard.field + 1) % fields } };
+  if (key === "left" || key === "right") return cycleWizardList(state, key === "right" ? 1 : -1);
+  if (key === "enter") {
+    if (state.wizard.field === fields - 1) return runWizard(state);
+    return { ...state, wizard: { ...state.wizard, field: state.wizard.field + 1 } };
+  }
+  return state;
+}
