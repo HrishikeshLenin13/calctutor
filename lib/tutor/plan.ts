@@ -306,3 +306,37 @@ function intersectPlan(text: string, left: string, right: string): Interpret {
     ],
   };
 }
+
+function tailKeys(value: number, which: "lower" | "upper"): Stroke[] {
+  const edge = which === "lower"
+    ? [stroke("neg", "(−)"), stroke("n1", "1"), stroke("2nd", "2nd"), stroke("comma", "EE"), stroke("n9", "9"), stroke("n9", "9")]
+    : [stroke("n1", "1"), stroke("2nd", "2nd"), stroke("comma", "EE"), stroke("n9", "9"), stroke("n9", "9")];
+  return which === "lower" ? [...edge, stroke("comma", ","), ...numberKeys(value)] : [...numberKeys(value), stroke("comma", ","), ...edge];
+}
+
+function normalPlan(text: string, lower: number | null, upper: number | null, mean: number, sd: number): Interpret {
+  if (lower === null && upper === null) return { error: `Say the bounds. ${EXAMPLES}` };
+  const keys = [stroke("2nd", "2nd"), stroke("vars", "vars"), stroke("n2", "2")];
+  if (lower === null) keys.push(...tailKeys(upper as number, "lower"));
+  else if (upper === null) keys.push(...tailKeys(lower, "upper"));
+  else keys.push(...numberKeys(lower), stroke("comma", ","), ...numberKeys(upper));
+  keys.push(stroke("comma", ","), ...numberKeys(mean), stroke("comma", ","), ...numberKeys(sd), stroke("rparen", ")"), stroke("enter", "enter"));
+  const where = lower === null ? `below ${upper}` : upper === null ? `above ${lower}` : `between ${lower} and ${upper}`;
+  return {
+    title: "Normal probability",
+    problem: text,
+    steps: [
+      wake(),
+      {
+        title: "Open normalcdf(",
+        why: "Area under a normal curve is normalcdf(, in the DISTR menu. That menu is 2nd, then vars. normalcdf( is option 2. pdf draws the curve; cdf gives the area.",
+        keys,
+      },
+      {
+        title: "Read the area",
+        why: `The arguments are lower, upper, mean, standard deviation. This one is the area ${where}, mean ${mean}, standard deviation ${sd}. A probability is the area, already a decimal. Multiply by 100 only if the question asks for a percent.`,
+        keys: [],
+      },
+    ],
+  };
+}
