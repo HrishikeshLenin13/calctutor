@@ -473,3 +473,150 @@ export function evaluate(source: string, env: Env): number | number[][] {
     return sampleSd(list);
   }
 }
+
+function bind(env: Env, variable: string, value: number): Env {
+  const name = variable.trim();
+  if (!/^([A-Z]|θ|X)$/.test(name)) throw new CalcError("SYNTAX");
+  return { ...env, vars: { ...env.vars, [name]: value }, bindX: name === "X" ? value : env.bindX };
+}
+function asNumber(value: number | number[][]) {
+  if (typeof value !== "number") throw new CalcError("DATA TYPE");
+  return value;
+}
+function readList(arg: string, env: Env) {
+  const name = arg.trim();
+  if (/^L[1-6]$/.test(name)) return env.lists[name] || [];
+  const value = evaluate(name, env);
+  if (typeof value === "number") throw new CalcError("DATA TYPE");
+  return value[0] || [];
+}
+
+function dispatch(fn: string, args: number[], angle: Angle): number {
+  const need = (count: number) => {
+    if (args.length !== count) throw new CalcError("ARGUMENT");
+  };
+  if (fn === "sin") return need(1), Math.sin(toRad(args[0], angle));
+  if (fn === "cos") return need(1), Math.cos(toRad(args[0], angle));
+  if (fn === "tan") {
+    need(1);
+    const rad = toRad(args[0], angle);
+    if (Math.abs(Math.cos(rad)) < 1e-12) throw new CalcError("DOMAIN");
+    return Math.tan(rad);
+  }
+  if (fn === "sin⁻¹" || fn === "cos⁻¹" || fn === "tan⁻¹") {
+    need(1);
+    if (fn !== "tan⁻¹" && (args[0] < -1 || args[0] > 1)) throw new CalcError("DOMAIN");
+    const rad = fn === "sin⁻¹" ? Math.asin(args[0]) : fn === "cos⁻¹" ? Math.acos(args[0]) : Math.atan(args[0]);
+    return angle === "DEGREE" ? (rad * 180) / Math.PI : rad;
+  }
+  if (fn === "log" || fn === "ln") {
+    need(1);
+    if (args[0] <= 0) throw new CalcError("DOMAIN");
+    return fn === "log" ? Math.log10(args[0]) : Math.log(args[0]);
+  }
+  if (fn === "√" || fn === "sqrt") {
+    need(1);
+    if (args[0] < 0) throw new CalcError("DOMAIN");
+    return Math.sqrt(args[0]);
+  }
+  if (fn === "³√") return need(1), Math.cbrt(args[0]);
+  if (fn === "abs") return need(1), Math.abs(args[0]);
+  if (fn === "min") return args.length ? Math.min(...args) : (() => { throw new CalcError("ARGUMENT"); })();
+  if (fn === "max") return args.length ? Math.max(...args) : (() => { throw new CalcError("ARGUMENT"); })();
+  if (fn === "round") {
+    if (!args.length || args.length > 2) throw new CalcError("ARGUMENT");
+    const places = args.length === 2 ? Math.max(0, Math.min(9, Math.trunc(args[1]))) : 0;
+    return Number(args[0].toFixed(places));
+  }
+  if (fn === "iPart") return need(1), Math.trunc(args[0]);
+  if (fn === "fPart") return need(1), args[0] - Math.trunc(args[0]);
+  if (fn === "nCr") return need(2), combination(args[0], args[1]);
+  if (fn === "nPr") return need(2), permutation(args[0], args[1]);
+  if (fn === "rand") return Math.random();
+  if (fn === "randInt") {
+    need(2);
+    const low = Math.ceil(args[0]);
+    const high = Math.floor(args[1]);
+    if (high < low) throw new CalcError("DOMAIN");
+    return low + Math.floor(Math.random() * (high - low + 1));
+  }
+  if (fn === "normalpdf") {
+    const [x, mu, sigma] = pad(args, 1);
+    return normalPdf(x, mu, sigma);
+  }
+  if (fn === "normalcdf") {
+    if (args.length !== 2 && args.length !== 4) throw new CalcError("ARGUMENT");
+    const mu = args.length === 4 ? args[2] : 0;
+    const sigma = args.length === 4 ? args[3] : 1;
+    return normalCdf(args[1], mu, sigma) - normalCdf(args[0], mu, sigma);
+  }
+  if (fn === "invNorm") {
+    const [p, mu, sigma] = pad(args, 1);
+    return invNorm(p, mu, sigma);
+  }
+  if (fn === "binompdf") return need(3), binomPmf(args[0], args[1], args[2]);
+  if (fn === "binomcdf") {
+    need(3);
+    let total = 0;
+    for (let k = 0; k <= args[2]; k++) total += binomPmf(args[0], args[1], k);
+    return total;
+  }
+  if (fn === "poissonpdf") return need(2), poissonPmf(args[0], args[1]);
+  if (fn === "poissoncdf") {
+    need(2);
+    let total = 0;
+    for (let k = 0; k <= args[1]; k++) total += poissonPmf(args[0], k);
+    return total;
+  }
+  throw new CalcError("SYNTAX");
+}
+
+function pad(args: number[], n: number): [number, number, number] {
+  if (args.length === n) return [args[0], 0, 1];
+  if (args.length === n + 2) return [args[0], args[1], args[2]];
+  throw new CalcError("ARGUMENT");
+}
+function toRad(value: number, angle: Angle) {
+  return angle === "DEGREE" ? (value * Math.PI) / 180 : value;
+}
+
+function addValues(a: number | number[][], b: number | number[][]) {
+  if (typeof a === "number" && typeof b === "number") return a + b;
+  if (typeof a !== "number" && typeof b !== "number") return map2(a, b, (x, y) => x + y);
+  throw new CalcError("DATA TYPE");
+}
+function subValues(a: number | number[][], b: number | number[][]) {
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  if (typeof a !== "number" && typeof b !== "number") return map2(a, b, (x, y) => x - y);
+  throw new CalcError("DATA TYPE");
+}
+function mulValues(a: number | number[][], b: number | number[][]) {
+  if (typeof a === "number" && typeof b === "number") return a * b;
+  if (typeof a === "number" && typeof b !== "number") return b.map((row) => row.map((cell) => cell * a));
+  if (typeof a !== "number" && typeof b === "number") return a.map((row) => row.map((cell) => cell * b));
+  return multiplyMatrices(a as number[][], b as number[][]);
+}
+function divValues(a: number | number[][], b: number | number[][]) {
+  if (typeof a !== "number" || typeof b !== "number") throw new CalcError("DATA TYPE");
+  if (b === 0) throw new CalcError("DIVIDE BY 0");
+  return a / b;
+}
+function factorial(n: number) {
+  if (n < 0 || !isInt(n) || n > 170) throw new CalcError("DOMAIN");
+  let value = 1;
+  for (let i = 2; i <= Math.round(n); i++) value *= i;
+  return value;
+}
+function combination(n: number, r: number) {
+  if (!isInt(n) || !isInt(r) || n < 0 || r < 0 || r > n) throw new CalcError("DOMAIN");
+  return permutation(n, r) / factorial(r);
+}
+function permutation(n: number, r: number) {
+  if (!isInt(n) || !isInt(r) || n < 0 || r < 0 || r > n) throw new CalcError("DOMAIN");
+  let value = 1;
+  for (let i = 0; i < r; i++) value *= n - i;
+  return value;
+}
+function isInt(n: number) {
+  return Math.abs(n - Math.round(n)) < 1e-9;
+}
