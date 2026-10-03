@@ -256,3 +256,20 @@ function zeroPlan(text: string, raw: string): Interpret {
     ],
   };
 }
+
+function extremePlan(text: string, raw: string, kind: "min" | "max"): Interpret {
+  const typed = exprKeys(raw);
+  if (!typed) return { error: `Write the function after minimum or maximum. ${EXAMPLES}` };
+  const spot = extremeOf(typed.source, kind);
+  if (!spot) return { error: `I can't see a ${kind === "min" ? "minimum" : "maximum"} inside the standard window.` };
+  const word = kind === "min" ? "minimum" : "maximum";
+  return {
+    title: `Find a ${word}`,
+    problem: text,
+    steps: [
+      ...graphSetup(raw, "Y1"),
+      ...calcAsk(kind, spot.x, word),
+      { title: `Read the ${word}`, why: "X is where it happens. Y is the value. That is the number a question usually wants when it says minimum or maximum value.", keys: [] },
+    ],
+  };
+}
