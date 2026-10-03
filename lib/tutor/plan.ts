@@ -340,3 +340,20 @@ function normalPlan(text: string, lower: number | null, upper: number | null, me
     ],
   };
 }
+
+function invPlan(text: string, area: number, mean: number, sd: number): Interpret {
+  if (!(area > 0 && area < 1)) return { error: "invNorm needs an area between 0 and 1. A 95th percentile is area 0.95." };
+  return {
+    title: "Inverse normal",
+    problem: text,
+    steps: [
+      wake(),
+      {
+        title: "Open invNorm(",
+        why: "When the question gives the area and asks for the cutoff, use invNorm(, option 3 in DISTR (2nd, vars). It is the reverse of normalcdf(.",
+        keys: [stroke("2nd", "2nd"), stroke("vars", "vars"), stroke("n3", "3"), ...numberKeys(area), stroke("comma", ","), ...numberKeys(mean), stroke("comma", ","), ...numberKeys(sd), stroke("rparen", ")"), stroke("enter", "enter")],
+      },
+      { title: "Read the cutoff", why: "The result is the value with that area to its left. For a standard normal percentile, that value is the z-score.", keys: [] },
+    ],
+  };
+}
