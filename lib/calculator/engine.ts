@@ -715,3 +715,34 @@ export function oneVarStats(values: number[]): OneVar {
     max: sorted.at(-1)!,
   };
 }
+
+export function linReg(xs: number[], ys: number[]) {
+  if (xs.length !== ys.length || xs.length < 2) throw new CalcError("DIM MISMATCH");
+  const n = xs.length;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (let i = 0; i < n; i++) {
+    sxx += (xs[i] - mx) ** 2;
+    syy += (ys[i] - my) ** 2;
+    sxy += (xs[i] - mx) * (ys[i] - my);
+  }
+  if (sxx === 0) throw new CalcError("DOMAIN");
+  const slope = sxy / sxx;
+  const intercept = my - slope * mx;
+  const r = syy === 0 ? (slope === 0 ? 1 : 0) : sxy / Math.sqrt(sxx * syy);
+  return { slope, intercept, r, r2: r * r };
+}
+
+export interface TvmInput {
+  n: number;
+  iPct: number;
+  pv: number;
+  pmt: number;
+  fv: number;
+  py: number;
+  cy: number;
+  begin: boolean;
+}
