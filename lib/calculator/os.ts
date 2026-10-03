@@ -141,3 +141,63 @@ const CATALOG: { label: string; action: string }[] = [
   "normalcdf(", "normalpdf(", "nPr(", "π", "poissoncdf(", "poissonpdf(", "rand", "randInt(", "round(",
   "sin(", "sin⁻¹(", "solve(", "SortA(", "SortD(", "stdDev(", "sum(", "tan(", "tan⁻¹(", "³√(", "√(", "→",
 ].map((label) => ({ label, action: `paste:${label}` }));
+
+export function createOs(): Os {
+  const env = emptyEnv();
+  return {
+    screen: "boot", second: false, alpha: "off", insert: false, rcl: false,
+    entry: "", cursor: 0, history: [], stack: [], recall: 0, draft: "", origin: "home",
+    angle: "RADIAN", notation: "NORMAL", digits: "FLOAT", plot: "FUNC", connected: true, sequential: true,
+    complex: "REAL", split: "FULL", vars: env.vars, ans: 0, lists: env.lists, matrices: env.matrices,
+    equations: ["", "", ""], eqOn: [true, true, true], regEq: "",
+    win: { xmin: -10, xmax: 10, xscl: 1, ymin: -10, ymax: 10, yscl: 1 },
+    tblStart: 0, tblStep: 1, tableOffset: 0, grid: false, axes: true, plot1: false, draws: [],
+    menu: null, error: "", errorIndex: 0, modeRow: 0, modeCol: 0,
+    listCol: 0, listRow: 0, listBuf: "", listEdit: false, yRow: 1, yCursor: 0,
+    winRow: 0, winBuf: "", winEdit: false, catalogQ: "", catalogI: 0,
+    trace: null, traceX: null, traceEq: 0, bound: null, mark: "", prompt: null, results: null, wizard: null,
+    tvm: { n: "0", i: "0", pv: "0", pmt: "0", fv: "0", py: "1", cy: "1", begin: false, cursor: 0, edit: false },
+    mat: "A", matRow: 0, matCol: 0, matBuf: "", matEdit: false, programs: [], editor: null, formatRow: 0, statRow: 0,
+  };
+}
+
+export function envOf(state: Os): Env {
+  return {
+    angle: state.angle, vars: state.vars, ans: state.ans, lists: state.lists, matrices: state.matrices,
+    equations: state.equations, regEq: state.regEq,
+  };
+}
+
+export function statusTokens(state: Os) {
+  return [state.notation, state.digits === "FLOAT" ? "FLOAT" : String(state.digits), "AUTO", state.complex === "REAL" ? "REAL" : state.complex, state.angle, "MP"];
+}
+
+export function modeOn(state: Os, row: number, col: number) {
+  if (row === 0) return ["NORMAL", "SCI", "ENG"][col] === state.notation;
+  if (row === 1) return col === 0 ? state.digits === "FLOAT" : state.digits === col - 1;
+  if (row === 2) return col === 0 ? state.angle === "RADIAN" : state.angle === "DEGREE";
+  if (row === 3) return ["FUNC", "PAR", "POL", "SEQ"][col] === state.plot;
+  if (row === 4) return col === 0 ? state.connected : !state.connected;
+  if (row === 5) return col === 0 ? state.sequential : !state.sequential;
+  if (row === 6) return ["REAL", "a+bi", "re^θi"][col] === state.complex;
+  return ["FULL", "HORIZ", "G-T"][col] === state.split;
+}
+
+export function catalogView(state: Os) {
+  const q = state.catalogQ.toLowerCase();
+  const items = CATALOG.filter((item) => item.label.toLowerCase().includes(q));
+  const index = Math.min(state.catalogI, Math.max(0, items.length - 1));
+  return { items, index };
+}
+
+export function hydrate(raw: unknown): Os {
+  const base = createOs();
+  if (!raw || typeof raw !== "object") return base;
+  const data = raw as Partial<Os>;
+  if (data.screen === "boot") return base;
+  const next: Os = { ...base, ...data, second: false, alpha: "off", rcl: false, menu: null, prompt: null };
+  if (!next.lists?.L1 || !next.matrices?.A || !Array.isArray(next.equations)) return base;
+  if (!["home", "off", "graph", "yeq"].includes(next.screen)) next.screen = "home";
+  next.recall = next.stack?.length || 0;
+  return next;
+}
