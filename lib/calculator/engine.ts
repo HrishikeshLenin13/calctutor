@@ -746,3 +746,47 @@ export interface TvmInput {
   cy: number;
   begin: boolean;
 }
+
+export function solveTvm(unknown: "N" | "I" | "PV" | "PMT" | "FV", input: TvmInput) {
+  const { py, cy, begin } = input;
+  if (!(py > 0) || !(cy > 0)) throw new CalcError("DOMAIN");
+  const rate = (pct: number) => (1 + pct / 100 / cy) ** (cy / py) - 1;
+  const balance = (n: number, pct: number, pv: number, pmt: number, fv: number) => {
+    const r = rate(pct);
+    const b = begin ? 1 : 0;
+    if (Math.abs(r) < 1e-12) return pv + pmt * n + fv;
+    const grow = (1 + r) ** -n;
+    return pv + pmt * (1 + r * b) * ((1 - grow) / r) + fv * grow;
+  };
+  if (unknown === "FV" || unknown === "PV" || unknown === "PMT") {
+    const r = rate(input.iPct);
+    const grow = Math.abs(r) < 1e-12 ? 1 : (1 + r) ** -input.n;
+    const k = Math.abs(r) < 1e-12 ? input.n : (1 + r * (begin ? 1 : 0)) * ((1 - grow) / r);
+    if (unknown === "FV") return -(input.pv + input.pmt * k) / grow;
+    if (unknown === "PV") return -(input.pmt * k + input.fv * grow);
+    if (Math.abs(k) < 1e-12) throw new CalcError("DIVIDE BY 0");
+    return -(input.pv + input.fv * grow) / k;
+  }
+  if (unknown === "N") {
+    const r = rate(input.iPct);
+    if (Math.abs(r) < 1e-12) {
+      if (input.pmt === 0) throw new CalcError("DIVIDE BY 0");
+      return -(input.pv + input.fv) / input.pmt;
+    }
+    const annuity = (input.pmt * (1 + r * (begin ? 1 : 0))) / r;
+    const coeff = input.fv - annuity;
+    const other = input.pv + annuity;
+    if (coeff === 0 || -other / coeff <= 0) throw new CalcError("NO SIGN CHNG");
+    return -Math.log(-other / coeff) / Math.log(1 + r);
+  }
+  let guess = input.iPct || 5;
+  for (let step = 0; step < 60; step++) {
+    const y = balance(input.n, guess, input.pv, input.pmt, input.fv);
+    const slope = (balance(input.n, guess + 1e-4, input.pv, input.pmt, input.fv) - balance(input.n, guess - 1e-4, input.pv, input.pmt, input.fv)) / 2e-4;
+    if (Math.abs(y) < 1e-6) return guess;
+    if (!Number.isFinite(slope) || Math.abs(slope) < 1e-10) break;
+    guess -= y / slope;
+  }
+  if (Math.abs(balance(input.n, guess, input.pv, input.pmt, input.fv)) > 1e-3) throw new CalcError("NO SIGN CHNG");
+  return guess;
+}
