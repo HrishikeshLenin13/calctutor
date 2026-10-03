@@ -620,3 +620,16 @@ function permutation(n: number, r: number) {
 function isInt(n: number) {
   return Math.abs(n - Math.round(n)) < 1e-9;
 }
+function binomPmf(n: number, p: number, k: number) {
+  if (!isInt(n) || !isInt(k) || n < 0 || k < 0 || k > n || p < 0 || p > 1) throw new CalcError("DOMAIN");
+  let coeff = 1;
+  const rr = Math.min(k, n - k);
+  for (let i = 1; i <= rr; i++) coeff = (coeff * (n - rr + i)) / i;
+  return coeff * p ** k * (1 - p) ** (n - k);
+}
+function poissonPmf(mu: number, k: number) {
+  if (mu < 0 || !isInt(k) || k < 0) throw new CalcError("DOMAIN");
+  let value = Math.exp(-mu);
+  for (let i = 1; i <= k; i++) value *= mu / i;
+  return value;
+}
