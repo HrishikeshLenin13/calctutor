@@ -121,3 +121,67 @@ export interface RunResult {
   env: Env;
   done?: boolean;
 }
+
+export function run(source: string, env: Env, notation: Notation = "NORMAL", digits: Digits = "FLOAT"): RunResult {
+  const expr = source.trim();
+  if (!expr) throw new CalcError("SYNTAX");
+  const next = cloneEnv(env);
+  const sorted = expr.match(/^Sort([AD])\((L[1-6])\)$/);
+  if (sorted) {
+    const values = [...(next.lists[sorted[2]] || [])].sort((a, b) => a - b);
+    next.lists[sorted[2]] = sorted[1] === "A" ? values : values.reverse();
+    return { text: "Done", env: next, done: true };
+  }
+  const cleared = expr.match(/^ClrList ((?:L[1-6],)*L[1-6])$/);
+  if (cleared) {
+    for (const name of cleared[1].split(",")) next.lists[name] = [];
+    return { text: "Done", env: next, done: true };
+  }
+  if (expr === "SetUpEditor") return { text: "Done", env: next, done: true };
+
+  const stored = splitStore(expr);
+  if (stored) {
+    const value = evaluate(stored.value, next);
+    if (typeof value !== "number") throw new CalcError("DATA TYPE");
+    for (const name of stored.names) {
+      if (!/^([A-Z]|θ)$/.test(name)) throw new CalcError("SYNTAX");
+      next.vars[name] = value;
+    }
+    next.ans = value;
+    return { text: formatTi(value, notation, digits), env: next };
+  }
+
+  const frac = /►Frac\s*$/.test(expr);
+  const value = evaluate(frac ? expr.replace(/►Frac\s*$/, "") : expr, next);
+  if (typeof value !== "number") return { text: formatMatrix(value), env: next };
+  next.ans = value;
+  if (frac) {
+    const pretty = toFraction(value);
+    if (!pretty) throw new CalcError("DOMAIN");
+    return { text: pretty, env: next };
+  }
+  return { text: formatTi(value, notation, digits), env: next };
+}
+
+export function formatWith(n: number, notation: Notation, digits: Digits) {
+  return formatTi(n, notation, digits);
+}
+
+function splitStore(expr: string) {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < expr.length; i++) {
+    const ch = expr[i];
+    if (ch === "(" || ch === "{") depth++;
+    else if (ch === ")" || ch === "}") depth = Math.max(0, depth - 1);
+    else if (ch === "→" && depth === 0) {
+      parts.push(expr.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  if (!parts.length) return null;
+  parts.push(expr.slice(start).trim());
+  if (parts.some((part) => !part)) throw new CalcError("SYNTAX");
+  return { value: parts[0], names: parts.slice(1) };
+}
