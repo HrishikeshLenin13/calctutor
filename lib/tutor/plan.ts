@@ -238,3 +238,21 @@ function calcAsk(kind: "zero" | "min" | "max" | "intersect", target: number, lab
     },
   ];
 }
+
+function zeroPlan(text: string, raw: string): Interpret {
+  const typed = exprKeys(raw);
+  if (!typed) return { error: `I can graph polynomials and the usual functions. ${EXAMPLES}` };
+  try { evalGraph(typed.source, 0, emptyEnv()); } catch { return { error: `That equation does not evaluate. ${EXAMPLES}` }; }
+  const roots = rootsOf(typed.source);
+  if (!roots.length) return { error: "I don't see a sign change between −10 and 10, so ZStandard will not find a zero. Try an equation that crosses the x-axis in that window." };
+  const extra = roots.length > 1 ? ` There ${roots.length === 2 ? "is another zero" : "are other zeros"} near ${roots.slice(1).map((root) => formatTi(root)).join(" and ")}. Run zero again with the left bound past this one.` : "";
+  return {
+    title: "Find a zero",
+    problem: text,
+    steps: [
+      ...graphSetup(raw, "Y1"),
+      ...calcAsk("zero", roots[0], "zero"),
+      { title: "Read the zero", why: `Y should be 0, or as close as the pixel allows. X is the zero.${extra}`, keys: [] },
+    ],
+  };
+}
