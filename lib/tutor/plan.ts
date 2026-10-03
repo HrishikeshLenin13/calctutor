@@ -424,3 +424,65 @@ function binomialPlan(text: string, n: number, p: number, x: number, cdf: boolea
     ],
   };
 }
+
+function degreePlan(text: string, fn: "sin" | "cos" | "tan", degrees: number): Interpret {
+  const name = { sin: "sin", cos: "cos", tan: "tan" }[fn];
+  return {
+    title: `${name} in degree mode`,
+    problem: text,
+    steps: [
+      wake(),
+      { title: "Open mode", why: "The status bar says RADIAN until you change it. Trig in degrees is wrong while that word is showing.", keys: [stroke("mode", "mode")] },
+      { title: "Select DEGREE", why: "Down twice reaches the third row, RADIAN and DEGREE. Right highlights DEGREE. Enter sets it. The highlight is the setting; you still have to press enter.", keys: [stroke("down", "down"), stroke("down", "down"), stroke("right", "right"), stroke("enter", "enter")] },
+      { title: "Quit", why: "2nd mode is quit. The status bar should now say DEGREE.", keys: [stroke("2nd", "2nd"), stroke("mode", "mode")] },
+      { title: `Enter ${name}(${degrees})`, why: "The function key types the name and the opening parenthesis. Close it, then enter.", keys: [stroke(fn, name), ...numberKeys(degrees), stroke("rparen", ")"), stroke("enter", "enter")] },
+    ],
+  };
+}
+
+function homePlan(text: string, raw: string): Interpret {
+  const typed = exprKeys(raw);
+  if (!typed) return { error: `I don't recognize that as a calculator problem. ${EXAMPLES}` };
+  try {
+    run(typed.source, emptyEnv());
+  } catch {
+    return { error: `That expression is not one I can type on this keypad. ${EXAMPLES}` };
+  }
+  return {
+    title: "Home screen",
+    problem: text,
+    steps: [
+      wake(),
+      { title: "Type it on the home screen", why: "The home screen is for a single calculation. X,T,θ,n types X. The negative key, (−), is different from subtract.", keys: [...typed.keys, stroke("enter", "enter")] },
+      { title: "Read the result", why: "The answer is right-aligned under the expression. 2nd, (−) recalls Ans if the next line needs it.", keys: [] },
+    ],
+  };
+}
+
+function tablePlan(text: string, raw: string): Interpret {
+  const typed = exprKeys(raw);
+  if (!typed) return { error: "Write the equation after table, like table of 2x+1." };
+  return {
+    title: "Table of values",
+    problem: text,
+    steps: [
+      wake(),
+      { title: "Enter Y1", why: "The table reads Y1. It does not read the home screen.", keys: [stroke("y=", "y="), ...typed.keys] },
+      { title: "Open the table", why: "2nd, then graph, is TABLE. The x-values start at TblStart, which is 0 until you change it in TBLSET (2nd, window).", keys: [stroke("2nd", "2nd"), stroke("graph", "graph")] },
+      { title: "Read the rows", why: "Each row is an x and the Y1 that goes with it. Up and down scroll.", keys: [] },
+    ],
+  };
+}
+
+function graphOnly(text: string, raw: string): Interpret {
+  const typed = exprKeys(raw);
+  if (!typed) return { error: "Type the equation too, like y = 2x + 1." };
+  return {
+    title: "Graph",
+    problem: text,
+    steps: [
+      ...graphSetup(raw, "Y1"),
+      { title: "Look at the graph", why: "That curve is Y1. The window is the standard one, x and y from −10 to 10.", keys: [] },
+    ],
+  };
+}
