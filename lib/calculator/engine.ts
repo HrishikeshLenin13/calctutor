@@ -666,3 +666,52 @@ export function invNorm(p: number, mu = 0, sigma = 1) {
   }
   return mu + sigma * x;
 }
+
+function median(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+function sampleSd(values: number[]) {
+  if (values.length < 2) throw new CalcError("DIVIDE BY 0");
+  const mean = values.reduce((a, b) => a + b, 0) / values.length;
+  return Math.sqrt(values.reduce((a, b) => a + (b - mean) ** 2, 0) / (values.length - 1));
+}
+
+export interface OneVar {
+  n: number;
+  mean: number;
+  sum: number;
+  sumSq: number;
+  sx: number | null;
+  ox: number;
+  min: number;
+  q1: number;
+  med: number;
+  q3: number;
+  max: number;
+}
+
+export function oneVarStats(values: number[]): OneVar {
+  if (!values.length) throw new CalcError("INVALID DIM");
+  const sum = values.reduce((a, b) => a + b, 0);
+  const mean = sum / values.length;
+  const ss = values.reduce((a, b) => a + (b - mean) ** 2, 0);
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  const lower = sorted.slice(0, mid);
+  const upper = sorted.slice(sorted.length % 2 ? mid + 1 : mid);
+  return {
+    n: values.length,
+    mean,
+    sum,
+    sumSq: values.reduce((a, b) => a + b * b, 0),
+    sx: values.length > 1 ? Math.sqrt(ss / (values.length - 1)) : null,
+    ox: Math.sqrt(ss / values.length),
+    min: sorted[0],
+    q1: median(lower.length ? lower : [sorted[0]]),
+    med: median(sorted),
+    q3: median(upper.length ? upper : [sorted.at(-1)!]),
+    max: sorted.at(-1)!,
+  };
+}
