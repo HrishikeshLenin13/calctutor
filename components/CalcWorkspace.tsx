@@ -349,3 +349,80 @@ function ToggleList({ title, rows, row }: { os: Os; title: string; rows: string[
 function StatPlot({ os }: { os: Os }) {
   return <div><div className={styles.menuTitle}>STAT PLOT</div><div className={styles.on}>Plot1:{os.plot1 ? "On" : "Off"}</div><div>Type: Scatter</div><div>Xlist:L1</div><div>Ylist:L2</div></div>;
 }
+
+function Graph({ os }: { os: Os }) {
+  const width = 320;
+  const height = 188;
+  const { xmin, xmax, ymin, ymax, xscl, yscl } = os.win;
+  const xSpan = xmax - xmin || 1;
+  const ySpan = ymax - ymin || 1;
+  const X = (x: number) => ((x - xmin) / xSpan) * width;
+  const Y = (y: number) => (1 - (y - ymin) / ySpan) * height;
+  const point = tracePoint(os);
+  return <div className={styles.graphWrap}>
+    <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Graph">
+      {os.grid && gridLines(xmin, xmax, ymin, ymax, xscl, yscl).map((line) => <line key={line.key} x1={X(line.x1)} y1={Y(line.y1)} x2={X(line.x2)} y2={Y(line.y2)} stroke="#d9d9d6" strokeWidth="1" />)}
+      {os.axes && <>
+        <line x1={X(0)} y1={0} x2={X(0)} y2={height} stroke="#222" strokeWidth="1" />
+        <line x1={0} y1={Y(0)} x2={width} y2={Y(0)} stroke="#222" strokeWidth="1" />
+      </>}
+      {os.draws.map((draw, index) => draw.kind === "h"
+        ? <line key={index} x1={0} x2={width} y1={Y(draw.at)} y2={Y(draw.at)} stroke="#7a4e12" strokeWidth="1.4" />
+        : <line key={index} y1={0} y2={height} x1={X(draw.at)} x2={X(draw.at)} stroke="#7a4e12" strokeWidth="1.4" />)}
+      {os.equations.map((equation, index) => equation.trim() && os.eqOn[index] ? <Curve key={equation + index} os={os} index={index} X={X} Y={Y} color={COLORS[index]} /> : null)}
+      {os.bound?.left !== null && os.bound?.left !== undefined && <line x1={X(os.bound.left)} x2={X(os.bound.left)} y1={0} y2={height} stroke="#111" strokeDasharray="3 3" strokeWidth="1" />}
+      {os.bound?.right !== null && os.bound?.right !== undefined && <line x1={X(os.bound.right)} x2={X(os.bound.right)} y1={0} y2={height} stroke="#111" strokeDasharray="3 3" strokeWidth="1" />}
+      {os.plot1 && os.lists.L1.map((x, index) => {
+        const y = os.lists.L2[index];
+        if (y === undefined) return null;
+        return <rect key={index} x={X(x) - 2.2} y={Y(y) - 2.2} width="4.4" height="4.4" fill="#222" />;
+      })}
+      {point && <circle cx={X(point.x)} cy={point.y === null ? -10 : Y(point.y)} r="3.2" fill="none" stroke="#111" strokeWidth="1.4" />}
+    </svg>
+    {(point || os.bound || os.mark) && <div className={styles.readout}><span>{os.bound ? (os.bound.phase === "left" ? "Left Bound?" : os.bound.phase === "right" ? "Right Bound?" : "Guess?") : os.mark || `${point?.name}=${os.equations[os.traceEq] || ""}`}</span>{point && <span>X={formatTi(point.x, os.notation, os.digits)} Y={point.y === null ? "" : formatTi(point.y, os.notation, os.digits)}</span>}</div>}
+  </div>;
+}
+
+function Curve({ os, index, X, Y, color }: { os: Os; index: number; X: (x: number) => number; Y: (y: number) => number; color: string }) {
+  const env = envOf(os);
+  const span = os.win.ymax - os.win.ymin || 1;
+  let d = "";
+  let pen = false;
+  let previous: number | null = null;
+  for (let step = 0; step <= 180; step++) {
+    const x = os.win.xmin + (step * (os.win.xmax - os.win.xmin)) / 180;
+    const y = evalGraph(os.equations[index], x, env);
+    if (y === null || Math.abs(y) > span * 8 || (previous !== null && Math.abs(y - previous) > span * 4)) {
+      pen = false;
+      previous = y;
+      continue;
+    }
+    d += `${pen ? "L" : "M"}${X(x).toFixed(2)} ${Y(y).toFixed(2)} `;
+    pen = os.connected;
+    previous = y;
+  }
+  if (!os.connected) {
+    const dots = [];
+    for (let step = 0; step <= 94; step++) {
+      const x = os.win.xmin + (step * (os.win.xmax - os.win.xmin)) / 94;
+      const y = evalGraph(os.equations[index], x, env);
+      if (y !== null) dots.push(<circle key={step} cx={X(x)} cy={Y(y)} r="1.5" fill={color} />);
+    }
+    return <>{dots}</>;
+  }
+  return <path d={d} fill="none" stroke={color} strokeWidth="1.6" />;
+}
+
+function gridLines(xmin: number, xmax: number, ymin: number, ymax: number, xscl: number, yscl: number) {
+  const lines: { key: string; x1: number; y1: number; x2: number; y2: number }[] = [];
+  if (xscl > 0) for (let x = Math.ceil(xmin / xscl) * xscl; x <= xmax; x += xscl) lines.push({ key: `x${x}`, x1: x, y1: ymin, x2: x, y2: ymax });
+  if (yscl > 0) for (let y = Math.ceil(ymin / yscl) * yscl; y <= ymax; y += yscl) lines.push({ key: `y${y}`, x1: xmin, y1: y, x2: xmax, y2: y });
+  return lines.slice(0, 80);
+}
+
+function marker(index: number) {
+  const number = index + 1;
+  if (number < 10) return String(number);
+  if (number === 10) return "0";
+  return String.fromCharCode(64 + number - 10);
+}
