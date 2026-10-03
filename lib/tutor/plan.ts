@@ -385,3 +385,23 @@ function statsPlan(text: string, values: number[]): Interpret {
     ],
   };
 }
+
+function regressionPlan(text: string, pairs: [number, number][]): Interpret {
+  if (pairs.length < 2) return { error: "Regression needs at least two points, written like (1, 2) (2, 4)." };
+  const xs = pairs.map((pair) => pair[0]);
+  const ys = pairs.map((pair) => pair[1]);
+  const up = repeat("up", "up", xs.length);
+  return {
+    title: "Linear regression",
+    problem: text,
+    steps: [
+      wake(),
+      { title: "Open the list editor", why: "stat, then 1:Edit. Paired data goes in L1 and L2, x beside y.", keys: [stroke("stat", "stat"), stroke("n1", "1")] },
+      listEntry(xs, "L1"),
+      { title: "Move to the top of L2", why: "You are sitting on the blank row under L1. Up returns to the first row. Right moves to L2 without changing the row.", keys: [...up, stroke("right", "right")] },
+      listEntry(ys, "L2"),
+      { title: "Choose LinReg(ax+b)", why: "2nd mode quits. stat, right arrow, opens CALC. LinReg(ax+b) is option 4. Option 3 is Med-Med, a different fit. a is the slope and b is the intercept.", keys: [stroke("2nd", "2nd"), stroke("mode", "mode"), stroke("stat", "stat"), stroke("right", "right"), stroke("n4", "4")] },
+      { title: "Move to Calculate", why: "Down twice passes Xlist and Ylist. Enter runs it on L1 and L2. Read a, b, and r.", keys: [stroke("down", "down"), stroke("down", "down"), stroke("enter", "enter")] },
+    ],
+  };
+}
