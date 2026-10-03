@@ -422,3 +422,64 @@ function modeKey(state: Os, key: KeyId): Os {
   if (modeRow === 6) return { ...next, complex: MODE_ROWS[6][modeCol] as Os["complex"] };
   return { ...next, split: MODE_ROWS[7][modeCol] as Os["split"] };
 }
+
+function yeqKey(state: Os, key: KeyId): Os {
+  if (key === "up") return { ...state, yRow: Math.max(0, state.yRow - 1), yCursor: state.yRow <= 1 ? 0 : state.equations[state.yRow - 2].length };
+  if (key === "down") return { ...state, yRow: Math.min(3, state.yRow + 1), yCursor: state.yRow >= 3 ? state.yCursor : state.equations[Math.min(2, state.yRow)].length };
+  if (key === "left" && state.yRow === 0) return { ...state, plot1: !state.plot1 };
+  if (state.yRow === 0) return state;
+  const index = state.yRow - 1;
+  const current = state.equations[index];
+  if (key === "left") return { ...state, yCursor: Math.max(0, state.yCursor - 1) };
+  if (key === "right") return { ...state, yCursor: Math.min(current.length, state.yCursor + 1) };
+  if (key === "del") {
+    const edit = delAt(current, state.yCursor);
+    const equations = [...state.equations] as [string, string, string];
+    equations[index] = edit.buf;
+    return { ...state, equations, yCursor: edit.cursor };
+  }
+  if (key === "enter") return { ...state, yRow: Math.min(3, state.yRow + 1), yCursor: state.equations[Math.min(2, state.yRow)].length };
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function windowKey(state: Os, key: KeyId): Os {
+  if (key === "up" || key === "down" || key === "enter") {
+    const saved = commitWindow(state);
+    const row = key === "up" ? (state.winRow + 5) % 6 : (state.winRow + 1) % 6;
+    return { ...saved, winRow: row, winEdit: false, winBuf: "" };
+  }
+  if (key === "left" || key === "right" || key === "del") {
+    const buf = state.winEdit ? state.winBuf : formatTi(winValue(state));
+    const cursor = state.winEdit ? state.winBuf.length : buf.length;
+    if (key === "del") return { ...state, winEdit: true, winBuf: delAt(buf, cursor).buf };
+    return { ...state, winEdit: true, winBuf: buf };
+  }
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function tblKey(state: Os, key: KeyId): Os {
+  const which = state.winRow > 0 ? "step" : "start";
+  if (key === "up" || key === "down" || key === "enter") {
+    const saved = commitTbl(state);
+    return { ...saved, winRow: which === "start" ? 1 : 0, winEdit: false, winBuf: "" };
+  }
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function listKey(state: Os, key: KeyId): Os {
+  if (key === "left" || key === "right" || key === "up" || key === "down" || key === "enter") {
+    const saved = commitList(state);
+    let { listCol, listRow } = saved;
+    if (key === "left") listCol = Math.max(0, listCol - 1);
+    if (key === "right") listCol = Math.min(5, listCol + 1);
+    if (key === "up") listRow = Math.max(0, listRow - 1);
+    if (key === "down" || key === "enter") listRow += 1;
+    return { ...saved, listCol, listRow, listEdit: false, listBuf: "" };
+  }
+  if (key === "del" && !state.listEdit) return deleteListCell(state);
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
