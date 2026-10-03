@@ -400,3 +400,25 @@ function recall(state: Os, dir: -1 | 1): Os {
   if (recall === state.stack.length) return { ...state, recall, entry: state.draft, cursor: state.draft.length };
   return { ...state, recall, entry: state.stack[recall], cursor: state.stack[recall].length };
 }
+
+function modeKey(state: Os, key: KeyId): Os {
+  if (key !== "left" && key !== "right" && key !== "up" && key !== "down" && key !== "enter") return state;
+  let { modeRow, modeCol } = state;
+  const cols = MODE_ROWS[modeRow].length;
+  if (key === "left") modeCol = (modeCol + cols - 1) % cols;
+  if (key === "right") modeCol = (modeCol + 1) % cols;
+  if (key === "up" || key === "down") {
+    modeRow = (modeRow + (key === "down" ? 1 : 7)) % 8;
+    modeCol = Math.min(modeCol, MODE_ROWS[modeRow].length - 1);
+  }
+  const next = { ...state, modeRow, modeCol };
+  if (key !== "enter") return next;
+  if (modeRow === 0) return { ...next, notation: MODE_ROWS[0][modeCol] as Notation };
+  if (modeRow === 1) return { ...next, digits: modeCol === 0 ? "FLOAT" : modeCol - 1 };
+  if (modeRow === 2) return { ...next, angle: modeCol === 0 ? "RADIAN" : "DEGREE" };
+  if (modeRow === 3) return { ...next, plot: MODE_ROWS[3][modeCol] as Os["plot"] };
+  if (modeRow === 4) return { ...next, connected: modeCol === 0 };
+  if (modeRow === 5) return { ...next, sequential: modeCol === 0 };
+  if (modeRow === 6) return { ...next, complex: MODE_ROWS[6][modeCol] as Os["complex"] };
+  return { ...next, split: MODE_ROWS[7][modeCol] as Os["split"] };
+}
