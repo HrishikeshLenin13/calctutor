@@ -542,3 +542,64 @@ function wizardKey(state: Os, key: KeyId): Os {
   }
   return state;
 }
+
+function tvmKey(state: Os, key: KeyId): Os {
+  if (key === "up" || key === "down" || key === "enter") {
+    const saved = commitTvm(state);
+    const cursor = key === "up" ? (state.tvm.cursor + 7) % 8 : (state.tvm.cursor + 1) % 8;
+    if (cursor === 7 && key !== "up") return { ...saved, tvm: { ...saved.tvm, cursor, begin: key === "enter" ? !saved.tvm.begin : saved.tvm.begin, edit: false } };
+    return { ...saved, tvm: { ...saved.tvm, cursor, edit: false } };
+  }
+  if (state.tvm.cursor === 7 && (key === "left" || key === "right")) return { ...state, tvm: { ...state.tvm, begin: !state.tvm.begin } };
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function matrixKey(state: Os, key: KeyId): Os {
+  const matrix = state.matrices[state.mat];
+  if (key === "left" || key === "right" || key === "up" || key === "down" || key === "enter") {
+    const saved = commitMatrix(state);
+    const rows = saved.matrices[saved.mat].length;
+    const cols = saved.matrices[saved.mat][0].length;
+    let { matRow, matCol } = saved;
+    if (key === "left") matCol = Math.max(0, matCol - 1);
+    if (key === "right") matCol = Math.min(cols - 1, matCol + 1);
+    if (key === "up") matRow = Math.max(0, matRow - 1);
+    if (key === "down" || key === "enter") matRow = Math.min(rows - 1, matRow + (key === "enter" && matCol < cols - 1 ? 0 : 1));
+    if (key === "enter" && state.matCol < cols - 1) matCol = state.matCol + 1;
+    return { ...saved, matRow, matCol, matEdit: false, matBuf: "" };
+  }
+  const text = PRIMARY[key];
+  return text && matrix ? typeInto(state, text) : state;
+}
+
+function editorKey(state: Os, key: KeyId): Os {
+  if (!state.editor) return state;
+  const program = state.programs[state.editor.index];
+  if (!program) return home(state);
+  if (key === "enter") {
+    const lines = program.lines.slice();
+    lines[state.editor.row] = state.editor.buf;
+    if (state.editor.row === lines.length - 1) lines.push("");
+    const programs = state.programs.slice();
+    programs[state.editor.index] = { ...program, lines };
+    const row = Math.min(lines.length - 1, state.editor.row + 1);
+    return { ...state, programs, editor: { ...state.editor, row, buf: lines[row], cursor: lines[row].length } };
+  }
+  if (key === "up" || key === "down") {
+    const lines = program.lines.slice();
+    lines[state.editor.row] = state.editor.buf;
+    const programs = state.programs.slice();
+    programs[state.editor.index] = { ...program, lines };
+    const row = Math.max(0, Math.min(lines.length - 1, state.editor.row + (key === "down" ? 1 : -1)));
+    return { ...state, programs, editor: { ...state.editor, row, buf: lines[row], cursor: lines[row].length } };
+  }
+  if (key === "left") return { ...state, editor: { ...state.editor, cursor: Math.max(0, state.editor.cursor - 1) } };
+  if (key === "right") return { ...state, editor: { ...state.editor, cursor: Math.min(state.editor.buf.length, state.editor.cursor + 1) } };
+  if (key === "del") {
+    const edit = delAt(state.editor.buf, state.editor.cursor);
+    return { ...state, editor: { ...state.editor, buf: edit.buf, cursor: edit.cursor } };
+  }
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
