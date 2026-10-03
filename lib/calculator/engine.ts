@@ -790,3 +790,83 @@ export function solveTvm(unknown: "N" | "I" | "PV" | "PMT" | "FV", input: TvmInp
   if (Math.abs(balance(input.n, guess, input.pv, input.pmt, input.fv)) > 1e-3) throw new CalcError("NO SIGN CHNG");
   return guess;
 }
+
+function map2(a: number[][], b: number[][], op: (x: number, y: number) => number) {
+  if (a.length !== b.length || a[0]?.length !== b[0]?.length) throw new CalcError("DIM MISMATCH");
+  return a.map((row, r) => row.map((cell, c) => op(cell, b[r][c])));
+}
+function multiplyMatrices(a: number[][], b: number[][]) {
+  if (a[0]?.length !== b.length) throw new CalcError("DIM MISMATCH");
+  return a.map((row) => b[0].map((_, c) => row.reduce((sum, cell, k) => sum + cell * b[k][c], 0)));
+}
+function determinant(matrix: number[][]) {
+  if (!matrix.length || matrix.length !== matrix[0]?.length) throw new CalcError("INVALID DIM");
+  const a = matrix.map((row) => [...row]);
+  let det = 1;
+  for (let col = 0; col < a.length; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < a.length; row++) if (Math.abs(a[row][col]) > Math.abs(a[pivot][col])) pivot = row;
+    if (Math.abs(a[pivot][col]) < 1e-12) return 0;
+    if (pivot !== col) {
+      [a[col], a[pivot]] = [a[pivot], a[col]];
+      det = -det;
+    }
+    det *= a[col][col];
+    for (let row = col + 1; row < a.length; row++) {
+      const factor = a[row][col] / a[col][col];
+      for (let k = col; k < a.length; k++) a[row][k] -= factor * a[col][k];
+    }
+  }
+  return det;
+}
+function invertMatrix(matrix: number[][]) {
+  if (!matrix.length || matrix.length !== matrix[0]?.length) throw new CalcError("INVALID DIM");
+  const n = matrix.length;
+  const a = matrix.map((row, r) => [...row, ...Array.from({ length: n }, (_, c) => (r === c ? 1 : 0))]);
+  for (let col = 0; col < n; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < n; row++) if (Math.abs(a[row][col]) > Math.abs(a[pivot][col])) pivot = row;
+    if (Math.abs(a[pivot][col]) < 1e-12) throw new CalcError("SINGULAR MAT");
+    [a[col], a[pivot]] = [a[pivot], a[col]];
+    const scale = a[col][col];
+    for (let k = 0; k < n * 2; k++) a[col][k] /= scale;
+    for (let row = 0; row < n; row++) {
+      if (row === col) continue;
+      const factor = a[row][col];
+      for (let k = 0; k < n * 2; k++) a[row][k] -= factor * a[col][k];
+    }
+  }
+  return a.map((row) => row.slice(n));
+}
+function formatMatrix(matrix: number[][]) {
+  return matrix.map((row) => `[${row.map((cell) => formatTi(cell)).join("  ")}]`).join("\n");
+}
+function cloneEnv(env: Env): Env {
+  return {
+    ...env,
+    vars: { ...env.vars },
+    lists: Object.fromEntries(Object.entries(env.lists).map(([key, value]) => [key, [...value]])),
+    matrices: {
+      A: env.matrices.A.map((row) => [...row]),
+      B: env.matrices.B.map((row) => [...row]),
+      C: env.matrices.C.map((row) => [...row]),
+    },
+    equations: [...env.equations],
+  };
+}
+
+export function evalGraph(expr: string, x: number, env: Env) {
+  if (!expr.trim()) return null;
+  try {
+    const value = evaluate(expr, { ...env, bindX: x });
+    return typeof value === "number" && Number.isFinite(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readValue(expr: string, env: Env) {
+  const value = evaluate(expr, env);
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new CalcError("DOMAIN");
+  return value;
+}
