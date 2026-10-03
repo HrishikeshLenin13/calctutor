@@ -330,3 +330,73 @@ function screenKey(state: Os, key: KeyId): Os {
     default: return state;
   }
 }
+
+function home(state: Os): Os {
+  return { ...state, screen: "home", menu: null, prompt: null, wizard: null, trace: null, rcl: false, bound: null, mark: "" };
+}
+
+function onClear(state: Os): Os {
+  if (state.screen === "home") return state.entry ? { ...state, entry: "", cursor: 0, draft: "" } : state;
+  if (state.screen === "yeq" && state.yRow > 0) {
+    const equations = [...state.equations] as [string, string, string];
+    if (!equations[state.yRow - 1]) return home(state);
+    equations[state.yRow - 1] = "";
+    return { ...state, equations, yCursor: 0 };
+  }
+  if (state.screen === "lists") return state.listEdit && state.listBuf ? { ...state, listBuf: "" } : deleteListCell(state);
+  if (state.screen === "window" && state.winEdit) return { ...state, winBuf: "", winEdit: true };
+  if (state.screen === "prompt" && state.prompt) return { ...state, prompt: { ...state.prompt, value: "" } };
+  if (state.screen === "catalog" && state.catalogQ) return { ...state, catalogQ: state.catalogQ.slice(0, -1), catalogI: 0 };
+  return home(state);
+}
+
+function homeKey(state: Os, key: KeyId): Os {
+  if (key === "enter") return commitEntry(state);
+  if (key === "del") return applyEntry(state, delAt(state.entry, state.cursor));
+  if (key === "left") return { ...state, cursor: Math.max(0, state.cursor - 1) };
+  if (key === "right") return { ...state, cursor: Math.min(state.entry.length, state.cursor + 1) };
+  if (key === "up") return recall(state, -1);
+  if (key === "down") return recall(state, 1);
+  const text = PRIMARY[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function commitEntry(state: Os): Os {
+  if (!state.entry.trim()) return state;
+  if (state.entry.trim() === "ClrDraw") return finish(state, state.entry, "Done", envOf({ ...state, draws: [] }), { draws: [] });
+  try {
+    const result = run(state.entry, envOf(state), state.notation, state.digits);
+    return finish(state, state.entry, result.text, result.env);
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+
+function finish(state: Os, expr: string, text: string, env: Env, extra: Partial<Os> = {}): Os {
+  const stack = [...state.stack, expr].slice(-50);
+  const history = [...state.history, { expr, result: text }].slice(-50);
+  return absorb({ ...state, ...extra, stack, history, entry: "", cursor: 0, recall: stack.length, draft: "", screen: "home", rcl: false }, env);
+}
+
+function fail(state: Os, kind: string): Os {
+  return { ...state, screen: "error", error: kind, errorIndex: 0 };
+}
+
+function errorKey(state: Os, key: KeyId): Os {
+  if (key === "up" || key === "down") return { ...state, errorIndex: state.errorIndex ? 0 : 1 };
+  if (key === "n1" || (key === "enter" && state.errorIndex === 0) || key === "clear") return { ...state, screen: "home", entry: "", cursor: 0, error: "" };
+  if (key === "n2" || (key === "enter" && state.errorIndex === 1)) return { ...state, screen: "home", error: "" };
+  return state;
+}
+
+function recall(state: Os, dir: -1 | 1): Os {
+  if (!state.stack.length) return state;
+  if (dir < 0) {
+    const recall = state.recall === state.stack.length ? state.stack.length - 1 : Math.max(0, state.recall - 1);
+    const entry = state.stack[recall];
+    return { ...state, recall, draft: state.recall === state.stack.length ? state.entry : state.draft, entry, cursor: entry.length };
+  }
+  const recall = Math.min(state.stack.length, state.recall + 1);
+  if (recall === state.stack.length) return { ...state, recall, entry: state.draft, cursor: state.draft.length };
+  return { ...state, recall, entry: state.stack[recall], cursor: state.stack[recall].length };
+}
