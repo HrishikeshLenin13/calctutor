@@ -901,3 +901,139 @@ function runWizard(state: Os): Os {
     return fail(state, error instanceof CalcError ? error.kind : "ERROR");
   }
 }
+
+function showResults(state: Os, title: string, lines: string[]) {
+  return { ...state, screen: "results", menu: null, wizard: null, results: { title, lines, top: 0 } };
+}
+
+function showGraph(state: Os): Os {
+  if (state.plot !== "FUNC") return showResults(state, "MODE", ["Set FUNC to graph Y=", "PAR POL SEQ are stored", "but not plotted here"]);
+  return { ...state, screen: "graph", menu: null, trace: null, traceX: null, bound: null, mark: "" };
+}
+
+function applyZoom(state: Os, kind: string): Os {
+  let { xmin, xmax, ymin, ymax, xscl, yscl } = state.win;
+  const cx = (xmin + xmax) / 2;
+  const cy = (ymin + ymax) / 2;
+  if (kind === "in" || kind === "out") {
+    const scale = kind === "in" ? 0.5 : 2;
+    xmin = cx - ((xmax - xmin) * scale) / 2;
+    xmax = cx + ((xmax - xmin) * scale) / 2;
+    ymin = cy - ((ymax - ymin) * scale) / 2;
+    ymax = cy + ((ymax - ymin) * scale) / 2;
+  } else if (kind === "standard") {
+    xmin = -10; xmax = 10; ymin = -10; ymax = 10; xscl = 1; yscl = 1;
+  } else if (kind === "decimal") {
+    xmin = -4.7; xmax = 4.7; ymin = -3.1; ymax = 3.1; xscl = 1; yscl = 1;
+  } else if (kind === "trig") {
+    xmin = -2 * Math.PI; xmax = 2 * Math.PI; ymin = -4; ymax = 4;
+  } else if (kind === "square") {
+    const height = (xmax - xmin) * (190 / 320);
+    ymin = cy - height / 2;
+    ymax = cy + height / 2;
+  } else if (kind === "integer") {
+    xmin = -10; xmax = 10; ymin = -10; ymax = 10; xscl = 1; yscl = 1;
+  } else if (kind === "box") {
+    return { ...state, menu: null, screen: "graph", trace: null };
+  } else if (kind === "stat") {
+    const xs = state.lists.L1 || [];
+    const ys = state.lists.L2 || [];
+    if (!xs.length || xs.length !== ys.length) return fail(state, "INVALID DIM");
+    const padX = (Math.max(...xs) - Math.min(...xs) || 1) * 0.1;
+    const padY = (Math.max(...ys) - Math.min(...ys) || 1) * 0.1;
+    xmin = Math.min(...xs) - padX; xmax = Math.max(...xs) + padX;
+    ymin = Math.min(...ys) - padY; ymax = Math.max(...ys) + padY;
+  }
+  return { ...state, menu: null, screen: "graph", trace: null, win: { xmin, xmax, ymin, ymax, xscl, yscl } };
+}
+
+function startCalc(state: Os, kind: string): Os {
+  if (kind === "value") return { ...state, screen: "prompt", menu: null, bound: null, prompt: { kind: "xvalue", title: "X=", value: "" } };
+  if (!state.equations[0].trim()) return fail(state, "INVALID");
+  if (kind === "intersect" && !state.equations[1].trim()) return fail(state, "INVALID");
+  return {
+    ...state,
+    screen: "graph",
+    menu: null,
+    trace: 47,
+    traceX: null,
+    traceEq: 0,
+    mark: "",
+    bound: { kind: kind as "zero" | "min" | "max" | "intersect", phase: "left", left: null, right: null },
+  };
+}
+
+function commitBound(state: Os): Os {
+  const ask = state.bound;
+  const point = tracePoint(state);
+  if (!ask || !point) return state;
+  if (ask.phase === "left") return { ...state, bound: { ...ask, phase: "right", left: point.x } };
+  if (ask.phase === "right") {
+    if (ask.left !== null && point.x <= ask.left) return state;
+    return { ...state, bound: { ...ask, phase: "guess", right: point.x } };
+  }
+  return solveGraph(state, ask.kind, ask.left ?? state.win.xmin, ask.right ?? state.win.xmax);
+}
+
+function finishPrompt(state: Os): Os {
+  if (!state.prompt) return state;
+  try {
+    const value = readValue(state.prompt.value || "0", envOf(state));
+    if (state.prompt.kind === "h") return { ...state, draws: [...state.draws, { kind: "h", at: value }], screen: "graph", prompt: null };
+    if (state.prompt.kind === "v") return { ...state, draws: [...state.draws, { kind: "v", at: value }], screen: "graph", prompt: null };
+    const y = evalGraph(state.equations[0], value, envOf(state));
+    return { ...state, screen: "graph", prompt: null, trace: xToIndex(state, value), traceX: value, traceEq: 0, entry: y === null ? "" : state.entry };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+
+function solveGraph(state: Os, kind: string, left: number, right: number): Os {
+  const eq = state.equations[0];
+  const other = state.equations[1];
+  if (!eq.trim()) return fail(state, "INVALID");
+  const steps = 120;
+  let best: { x: number; y: number } | null = null;
+  let prev: number | null = null;
+  let prev2: number | null = null;
+  let prevX = left;
+  const sample = (x: number) => {
+    const y1 = evalGraph(eq, x, envOf(state));
+    if (y1 === null) return null;
+    if (kind !== "intersect") return y1;
+    const y2 = evalGraph(other, x, envOf(state));
+    return y2 === null ? null : y1 - y2;
+  };
+  for (let i = 0; i <= steps; i++) {
+    const x = left + (i * (right - left)) / steps;
+    const y = sample(x);
+    if (y === null) { prev2 = prev; prev = null; continue; }
+    if ((kind === "zero" || kind === "intersect") && prev !== null && prev * y <= 0) {
+      const root = prevX + (x - prevX) * (Math.abs(prev) / (Math.abs(prev) + Math.abs(y) || 1));
+      return finishGraph(state, kind, root);
+    }
+    const local = prev !== null && prev2 !== null && (kind === "min" ? prev < prev2 && prev < y : kind === "max" ? prev > prev2 && prev > y : false);
+    if (local && prev !== null) {
+      const point = { x: prevX, y: prev };
+      if (!best || (kind === "min" ? point.y < best.y : point.y > best.y)) best = point;
+    }
+    prev2 = prev; prev = y; prevX = x;
+  }
+  if (!best || kind === "zero" || kind === "intersect") return fail({ ...state, bound: null }, "NO SIGN CHNG");
+  return finishGraph(state, kind, refineExtremum(eq, best.x, kind, envOf(state)));
+}
+
+function refineExtremum(eq: string, x: number, kind: string, env: ReturnType<typeof envOf>) {
+  let left = x - 0.35;
+  let right = x + 0.35;
+  for (let i = 0; i < 28; i++) {
+    const m1 = left + (right - left) / 3;
+    const m2 = right - (right - left) / 3;
+    const y1 = evalGraph(eq, m1, env);
+    const y2 = evalGraph(eq, m2, env);
+    if (y1 === null || y2 === null) return x;
+    if (kind === "min" ? y1 < y2 : y1 > y2) right = m2;
+    else left = m1;
+  }
+  return (left + right) / 2;
+}
