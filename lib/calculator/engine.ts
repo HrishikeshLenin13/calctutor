@@ -185,3 +185,291 @@ function splitStore(expr: string) {
   if (parts.some((part) => !part)) throw new CalcError("SYNTAX");
   return { value: parts[0], names: parts.slice(1) };
 }
+
+export function evaluate(source: string, env: Env): number | number[][] {
+  const s = source.replace(/RegEQ|Y[123]/g, (token) => {
+    const body = token === "RegEQ" ? env.regEq : env.equations[Number(token[1]) - 1];
+    return body ? `(${body})` : token;
+  });
+  let i = 0;
+  const value = parseComparison();
+  skip();
+  if (i < s.length) throw new CalcError("SYNTAX");
+  return value;
+
+  function skip() {
+    while (s[i] === " ") i++;
+  }
+  function parseComparison(): number | number[][] {
+    const left = parseAdd();
+    skip();
+    const op = ["≠", "≥", "≤", "="].find((token) => s.startsWith(token, i)) || (s[i] === ">" || s[i] === "<" ? s[i] : "");
+    if (!op) return left;
+    if (typeof left !== "number") throw new CalcError("DATA TYPE");
+    i += op.length;
+    const right = parseAdd();
+    if (typeof right !== "number") throw new CalcError("DATA TYPE");
+    const pass = op === "=" ? left === right : op === "≠" ? left !== right : op === ">" ? left > right : op === "≥" ? left >= right : op === "<" ? left < right : left <= right;
+    return pass ? 1 : 0;
+  }
+  function parseAdd(): number | number[][] {
+    let left = parseMul();
+    while (true) {
+      skip();
+      if (s[i] !== "+" && s[i] !== "−" && s[i] !== "-") break;
+      const op = s[i++];
+      const right = parseMul();
+      left = op === "+" ? addValues(left, right) : subValues(left, right);
+    }
+    return left;
+  }
+  function parseMul(): number | number[][] {
+    let left = parseUnary();
+    while (true) {
+      skip();
+      if (s[i] === "×" || s[i] === "*") {
+        i++;
+        left = mulValues(left, parseUnary());
+        continue;
+      }
+      if (s[i] === "÷" || s[i] === "/") {
+        i++;
+        left = divValues(left, parseUnary());
+        continue;
+      }
+      if (startsAtom()) {
+        left = mulValues(left, parseUnary());
+        continue;
+      }
+      break;
+    }
+    return left;
+  }
+  function startsAtom() {
+    const ch = s[i];
+    if (!ch || "⁺⁻−+×÷/*^,)]}=≠≥≤<>!²³°".includes(ch)) return false;
+    return /[0-9.(π√³[{A-Za-zθ]/.test(ch) || FUNCS.some((name) => s.startsWith(name, i));
+  }
+  function parseUnary(): number | number[][] {
+    skip();
+    if (s[i] === "⁻" || s[i] === "−" || s[i] === "-") {
+      i++;
+      const value = parseUnary();
+      if (typeof value !== "number") throw new CalcError("DATA TYPE");
+      return -value;
+    }
+    if (s[i] === "+") {
+      i++;
+      return parseUnary();
+    }
+    return parsePower();
+  }
+  function parsePower(): number | number[][] {
+    const base = parsePostfix();
+    skip();
+    if (s[i] !== "^") return base;
+    i++;
+    const exp = parseUnary();
+    if (typeof base !== "number" || typeof exp !== "number") throw new CalcError("DATA TYPE");
+    const value = base ** exp;
+    if (!Number.isFinite(value)) throw new CalcError("DOMAIN");
+    return value;
+  }
+  function parsePostfix(): number | number[][] {
+    let value = parseAtom();
+    while (true) {
+      if (s[i] === "!") {
+        if (typeof value !== "number") throw new CalcError("DATA TYPE");
+        i++;
+        value = factorial(value);
+      } else if (s[i] === "²") {
+        if (typeof value !== "number") throw new CalcError("DATA TYPE");
+        i++;
+        value *= value;
+      } else if (s[i] === "³") {
+        if (typeof value !== "number") throw new CalcError("DATA TYPE");
+        i++;
+        value = value ** 3;
+      } else if (s.startsWith("⁻¹", i)) {
+        i += 2;
+        value = typeof value === "number" ? (value === 0 ? (() => { throw new CalcError("DIVIDE BY 0"); })() : 1 / value) : invertMatrix(value);
+      } else if (s[i] === "°") {
+        if (typeof value !== "number") throw new CalcError("DATA TYPE");
+        i++;
+        value = env.angle === "RADIAN" ? (value * Math.PI) / 180 : value;
+      } else break;
+    }
+    return value;
+  }
+  function parseAtom(): number | number[][] {
+    skip();
+    const start = i;
+    if (s[i] === "(") {
+      i++;
+      const inner = parseComparison();
+      skip();
+      if (s[i++] !== ")") throw new CalcError("SYNTAX");
+      return inner;
+    }
+    if (s[i] === "{") return parseBrace();
+    const num = readNumber();
+    if (num !== null) return num;
+    if (s.startsWith("π", i)) {
+      i += 1;
+      return Math.PI;
+    }
+    if (s[i] === "[" && "ABC".includes(s[i + 1] || "") && s[i + 2] === "]") {
+      const name = s[i + 1] as "A" | "B" | "C";
+      i += 3;
+      return env.matrices[name].map((row) => [...row]);
+    }
+    const fn = FUNCS.find((name) => s.startsWith(name, i));
+    if (fn) {
+      i += fn.length;
+      skip();
+      if (s[i] !== "(") {
+        if (fn === "rand") return Math.random();
+        throw new CalcError("SYNTAX");
+      }
+      i++;
+      return call(fn, readArgs());
+    }
+    if (s.startsWith("Ans", i)) {
+      i += 3;
+      return env.ans;
+    }
+    if (/^L[1-6]/.test(s.slice(i, i + 2))) {
+      const name = s.slice(i, i + 2);
+      i += 2;
+      if (s[i] !== "(") throw new CalcError("DATA TYPE");
+      i++;
+      const index = parseComparison();
+      skip();
+      if (s[i++] !== ")" || typeof index !== "number") throw new CalcError("SYNTAX");
+      const list = env.lists[name] || [];
+      const at = Math.round(index) - 1;
+      if (at < 0 || at >= list.length) throw new CalcError("INVALID DIM");
+      return list[at];
+    }
+    if (s[i] === "X" && env.bindX !== undefined) {
+      i++;
+      return env.bindX;
+    }
+    if (s[i] === "e") {
+      i++;
+      return Math.E;
+    }
+    if (s[i] === "i") throw new CalcError("NONREAL ANS");
+    if (s[i] && /^[A-Zθ]$/.test(s[i])) return env.vars[s[i++]] ?? 0;
+    if (i === start) throw new CalcError("SYNTAX");
+    throw new CalcError("SYNTAX");
+  }
+  function readNumber() {
+    const match = s.slice(i).match(/^(?:\d+\.?\d*|\.\d+)(?:(?:ᴇ|[Ee])[⁻−+\-]?\d+)?/);
+    if (!match) return null;
+    i += match[0].length;
+    const value = Number(match[0].replace(/ᴇ|[Ee]/, "e").replace(/⁻|−/g, "-"));
+    if (!Number.isFinite(value)) throw new CalcError("DOMAIN");
+    return value;
+  }
+  function readArgs() {
+    const args: string[] = [];
+    let depth = 1;
+    let start = i;
+    for (; i < s.length; i++) {
+      if (s[i] === "(" || s[i] === "{") depth++;
+      else if (s[i] === ")" || s[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          args.push(s.slice(start, i).trim());
+          i++;
+          return args.filter((arg, index) => arg.length > 0 || index > 0);
+        }
+      } else if (s[i] === "," && depth === 1) {
+        args.push(s.slice(start, i).trim());
+        start = i + 1;
+      }
+    }
+    throw new CalcError("SYNTAX");
+  }
+  function parseBrace(): number[][] {
+    i++;
+    const values: number[] = [];
+    skip();
+    if (s[i] === "}") {
+      i++;
+      return [values];
+    }
+    while (true) {
+      const item = parseComparison();
+      if (typeof item !== "number") throw new CalcError("DATA TYPE");
+      values.push(item);
+      skip();
+      if (s[i] === ",") {
+        i++;
+        continue;
+      }
+      if (s[i] === "}") {
+        i++;
+        return [values];
+      }
+      throw new CalcError("SYNTAX");
+    }
+  }
+  function call(fn: string, args: string[]): number | number[][] {
+    if (fn === "nDeriv" || fn === "fnInt" || fn === "solve") return calculus(fn, args);
+    if (fn === "sum" || fn === "mean" || fn === "median" || fn === "stdDev") return listCall(fn, args[0] || "");
+    if (fn === "det") {
+      const matrix = evaluate(args[0] || "", env);
+      if (typeof matrix === "number") throw new CalcError("DATA TYPE");
+      return determinant(matrix);
+    }
+    const values = args.map((arg) => {
+      const item = evaluate(arg, env);
+      if (typeof item !== "number") throw new CalcError("DATA TYPE");
+      return item;
+    });
+    return dispatch(fn, values, env.angle);
+  }
+  function calculus(fn: string, args: string[]) {
+    if (fn === "nDeriv") {
+      if (args.length < 3) throw new CalcError("ARGUMENT");
+      const at = asNumber(evaluate(args[2], env));
+      const sample = (x: number) => asNumber(evaluate(args[0], bind(env, args[1], x)));
+      return (sample(at + 1e-4) - sample(at - 1e-4)) / 2e-4;
+    }
+    if (fn === "fnInt") {
+      if (args.length < 4) throw new CalcError("ARGUMENT");
+      const a = asNumber(evaluate(args[2], env));
+      const b = asNumber(evaluate(args[3], env));
+      const n = 80;
+      const h = (b - a) / n;
+      const sample = (x: number) => asNumber(evaluate(args[0], bind(env, args[1], x)));
+      let total = sample(a) + sample(b);
+      for (let step = 1; step < n; step++) total += (step % 2 ? 4 : 2) * sample(a + step * h);
+      return (total * h) / 3;
+    }
+    if (args.length < 3) throw new CalcError("ARGUMENT");
+    let x = asNumber(evaluate(args[2], env));
+    const sample = (value: number) => asNumber(evaluate(args[0], bind(env, args[1], value)));
+    for (let step = 0; step < 40; step++) {
+      const y = sample(x);
+      if (Math.abs(y) < 1e-9) return x;
+      const slope = (sample(x + 1e-5) - sample(x - 1e-5)) / 2e-5;
+      if (!Number.isFinite(slope) || Math.abs(slope) < 1e-12) break;
+      const next = x - y / slope;
+      if (Math.abs(next - x) < 1e-10) return next;
+      x = next;
+    }
+    if (Math.abs(sample(x)) > 1e-6) throw new CalcError("NO SIGN CHNG");
+    return x;
+  }
+  function listCall(fn: string, arg: string) {
+    const list = readList(arg, env);
+    if (!list.length) throw new CalcError("INVALID DIM");
+    if (fn === "sum") return list.reduce((a, b) => a + b, 0);
+    if (fn === "mean") return list.reduce((a, b) => a + b, 0) / list.length;
+    if (fn === "median") return median(list);
+    return sampleSd(list);
+  }
+}
