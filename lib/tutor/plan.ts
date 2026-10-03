@@ -486,3 +486,201 @@ function graphOnly(text: string, raw: string): Interpret {
     ],
   };
 }
+
+const LEXICON: [string, string[]][] = [
+  ["zero", ["zero", "zeros", "root", "roots", "xintercept", "xintercepts"]],
+  ["min", ["minimum", "minima", "min"]],
+  ["max", ["maximum", "maxima", "max"]],
+  ["vertex", ["vertex", "vertices"]],
+  ["intersect", ["intersect", "intersection", "intersects", "crossing", "cross"]],
+  ["stats", ["average", "mean", "median", "stdev", "deviation", "statistics", "stats", "avg", "std"]],
+  ["reg", ["regression", "linreg", "bestfit", "trendline", "trend"]],
+  ["binom", ["binomial", "binom", "binompdf", "binomcdf"]],
+  ["inv", ["invnorm", "percentile", "cutoff"]],
+  ["normal", ["normal", "normalcdf", "probability", "between", "below", "above", "less", "greater", "under"]],
+  ["degree", ["degree", "degrees", "degres", "deg"]],
+  ["radian", ["radian", "radians"]],
+  ["table", ["table"]],
+  ["graph", ["graph", "sketch", "plot"]],
+  ["sin", ["sin", "sine"]],
+  ["cos", ["cos", "cosine"]],
+  ["tan", ["tan", "tangent"]],
+];
+
+const EXACT = new Map<string, string>();
+for (const [canon, words] of LEXICON) for (const word of words) EXACT.set(word, canon);
+
+function distance(a: string, b: string) {
+  const rows = Array.from({ length: a.length + 1 }, () => new Array<number>(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i++) rows[i][0] = i;
+  for (let j = 0; j <= b.length; j++) rows[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      rows[i][j] = Math.min(rows[i - 1][j] + 1, rows[i][j - 1] + 1, rows[i - 1][j - 1] + cost);
+    }
+  }
+  return rows[a.length][b.length];
+}
+
+const SKIP = new Set(["the", "and", "for", "you", "how", "are", "was", "not", "but", "can", "has", "had", "than", "then", "that", "this", "with", "from", "your", "have", "just", "like", "into", "over", "also", "only", "some", "them", "very", "when", "what", "will", "here", "more", "most", "much", "such", "each", "even", "well", "were", "been", "they", "does", "where", "find", "show", "type", "its", "its", "out", "all", "any", "our", "now", "one", "two"]);
+
+function closest(word: string) {
+  const known = EXACT.get(word);
+  if (known) return { canon: known, written: word };
+  if (word.length < 3 || SKIP.has(word)) return null;
+  const limit = word.length >= 6 ? 2 : 1;
+  let best: { canon: string; written: string } | null = null;
+  let bestD = limit + 1;
+  for (const [canon, words] of LEXICON) {
+    for (const written of words) {
+      if (Math.abs(written.length - word.length) > limit) continue;
+      const score = distance(word, written);
+      if (score < bestD) { best = { canon, written }; bestD = score; }
+    }
+  }
+  return bestD <= limit ? best : null;
+}
+
+function hear(input: string) {
+  const hits = new Set<string>();
+  const text = input.toLowerCase()
+    .replace(/[’']/g, "")
+    .replace(/\bsquare\s+roots?\b/g, " sqrt ")
+    .replace(/\bthen\b/g, "than")
+    .replace(/\bx-intercepts?\b/g, " xintercept ")
+    .replace(/\b(sin|cos|tan)(\d)/g, "$1 $2")
+    .split(/([^a-z0-9]+)/)
+    .map((part) => {
+      if (!/^[a-z]/.test(part)) return part;
+      const found = closest(part);
+      if (!found) return part;
+      hits.add(found.canon);
+      return found.written;
+    })
+    .join("");
+  return { text: text.replace(/\s+/g, " ").trim(), hits };
+}
+
+function tag(plan: Interpret, readAs: string): Interpret {
+  if ("error" in plan) return plan;
+  return { ...plan, readAs };
+}
+
+function chunksOf(text: string) {
+  const stripped = text
+    .replace(/\b(zero|root|roots|minimum|maximum|min|max|vertex|intersect|intersection|graph|plot|table|find|the|of|for|a|an|what|is|whats|please|can|you|how|do|i|solve|equation|function|where|does|equal|equals)\b/gi, " ")
+    .replace(/y\s*=/gi, " ")
+    .replace(/f\s*\(\s*x\s*\)\s*=/gi, " ")
+    .replace(/=\s*0\b/g, " ");
+  return stripped.split(/\b(?:and|with)\b/i)
+    .map((part) => part.replace(/[^0-9xX+\-*/^().,π√°]/g, ""))
+    .map((part) => part.replace(/^[+*/^.,]+|[+*/^.,]+$/g, ""))
+    .filter((part) => /[0-9xπ√]/i.test(part) && exprKeys(part));
+}
+
+function grab(text: string, pattern: RegExp) {
+  const match = text.match(pattern);
+  return match ? Number(match[1]) : null;
+}
+
+function numbersIn(text: string) {
+  const tail = text.replace(/^.*?\b(?:of|for|:)\s+/i, "");
+  const source = (tail === text ? text : tail).replace(/\b1\s*[- ]?\s*var\b/gi, " ");
+  return [...source.matchAll(/-?\d+(?:\.\d+)?/g)].map((match) => Number(match[0]));
+}
+
+export function interpret(input: string): Interpret {
+  const original = input.trim().replace(/\s+/g, " ");
+  if (!original) return { error: "Type a problem." };
+  const { text, hits } = hear(original);
+  const has = (name: string) => hits.has(name);
+  const mean = grab(text, /(?:mean|μ|mu|average)\s*(?:=|of|is)?\s*(-?\d+(?:\.\d+)?)/) ?? 0;
+  const sd = grab(text, /(?:sd|std|sigma|deviation)\s*(?:=|of|is)?\s*(-?\d+(?:\.\d+)?)/) ?? 1;
+
+  if (has("binom") || /\bn\s*=/.test(text) && /\bp\s*=/.test(text)) {
+    const n = grab(text, /\bn\s*=\s*(-?\d+(?:\.\d+)?)/) ?? grab(text, /(\d+(?:\.\d+)?)\s+trials/);
+    const p = grab(text, /\bp\s*=\s*(-?\d+(?:\.\d+)?)/) ?? grab(text, /(?:probability|p)\s*(?:=|of)?\s*(-?\d+(?:\.\d+)?)/);
+    const x = grab(text, /\bx\s*=\s*(-?\d+(?:\.\d+)?)/) ?? grab(text, /exactly\s+(-?\d+(?:\.\d+)?)/) ?? grab(text, /at most\s+(-?\d+(?:\.\d+)?)/);
+    const nums = numbersIn(text);
+    const prob = p ?? nums.find((value) => value > 0 && value < 1) ?? null;
+    const whole = nums.filter((value) => value !== prob && value >= 1);
+    const trials = n ?? whole[0] ?? null;
+    const success = x ?? whole[1] ?? null;
+    if (trials !== null && prob !== null && success !== null) {
+      const cdf = /cdf|at most/.test(text);
+      return tag(binomialPlan(original, trials, prob, success, cdf), cdf ? `binomcdf(${trials}, ${prob}, ${success})` : `binompdf(${trials}, ${prob}, ${success})`);
+    }
+  }
+
+  if (has("inv") || /z-?score/.test(text)) {
+    const percent = grab(text, /(\d+(?:\.\d+)?)\s*(?:st|nd|rd|th)?\s*percentile/) ?? grab(text, /percentile\s*(?:=|of|is)?\s*(\d+(?:\.\d+)?)/);
+    const area = percent !== null && percent > 1 ? percent / 100 : percent !== null ? percent : grab(text, /(0?\.\d+)/);
+    if (area !== null) return tag(invPlan(original, area, mean, sd), `invNorm(${area})`);
+  }
+
+  const pairs = [...original.matchAll(/\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g)].map((match) => [Number(match[1]), Number(match[2])] as [number, number]);
+  if (pairs.length >= 2 && (has("reg") || !has("zero") && !has("normal") && !has("min") && !has("max"))) {
+    return tag(regressionPlan(original, pairs), `Line through ${pairs.length} points`);
+  }
+
+  const areaWords = has("normal") || /p\s*\(|\bz\s*[<>=]|less than|greater than|below|above|left of|right of|between|from\s+-?\d/.test(text);
+  if (areaWords && !has("zero") && !has("min") && !has("max") && !/x\s*\^|y\s*=/.test(text)) {
+    const between = text.match(/between\s+(?:z\s*=\s*)?(-?\d+(?:\.\d+)?)\s+and\s+(?:z\s*=\s*)?(-?\d+(?:\.\d+)?)/) || text.match(/from\s+(-?\d+(?:\.\d+)?)\s+to\s+(-?\d+(?:\.\d+)?)/);
+    const band = text.match(/p\s*\(\s*(-?\d+(?:\.\d+)?)\s*<\s*[zx]\s*<\s*(-?\d+(?:\.\d+)?)\s*\)/);
+    if (between) return tag(normalPlan(original, Number(between[1]), Number(between[2]), mean, sd), `Area from ${between[1]} to ${between[2]}`);
+    if (band) return tag(normalPlan(original, Number(band[1]), Number(band[2]), mean, sd), `Area from ${band[1]} to ${band[2]}`);
+    const left = text.match(/(?:less than|below|under|to the left of|<)\s*(?:z\s*=\s*)?(-?\d+(?:\.\d+)?)/);
+    const right = text.match(/(?:greater than|above|more than|to the right of|>)\s*(?:z\s*=\s*)?(-?\d+(?:\.\d+)?)/);
+    if (left) return tag(normalPlan(original, null, Number(left[1]), mean, sd), `Area below ${left[1]}`);
+    if (right) return tag(normalPlan(original, Number(right[1]), null, mean, sd), `Area above ${right[1]}`);
+  }
+
+  const trig = text.match(/(sin|cos|tan)\s*\(?\s*(-?\d+(?:\.\d+)?)/);
+  if (trig && !has("radian") && !/π/.test(original)) {
+    return tag(degreePlan(original, trig[1] as "sin" | "cos" | "tan", Number(trig[2])), `${trig[1]} ${trig[2]} degrees`);
+  }
+
+  const parts = chunksOf(text);
+  if (has("intersect") && parts.length >= 2) return tag(intersectPlan(original, parts[0], parts[1]), `Intersection of ${parts[0]} and ${parts[1]}`);
+  if ((has("min") || has("max") || has("vertex")) && parts[0]) {
+    const kind = has("min") ? "min" : has("max") ? "max" : (extremeOf(exprKeys(parts[0])?.source || parts[0], "min") ? "min" : "max");
+    return tag(extremePlan(original, parts[0], kind), `${kind === "min" ? "Minimum" : "Maximum"} of ${parts[0]}`);
+  }
+  if ((has("zero") || /=\s*0\b/.test(text)) && parts[0]) return tag(zeroPlan(original, parts[0].replace(/=\s*0$/, "")), `Zero of ${parts[0]}`);
+  if (has("table") && parts[0]) return tag(tablePlan(original, parts[0]), `Table of ${parts[0]}`);
+  if (has("graph") && parts[0]) return tag(graphOnly(original, parts[0]), `Graph ${parts[0]}`);
+
+  const bareList = /^-?\d+(?:\.\d+)?(?:\s*(?:,|\s)\s*-?\d+(?:\.\d+)?)+$/.test(original.trim());
+  if ((has("stats") || bareList) && !/[+*/^]/.test(text) && !/x/i.test(text)) {
+    const values = numbersIn(original);
+    if (values.length >= 2) return tag(statsPlan(original, values), `1-Var Stats of ${values.join(", ")}`);
+  }
+
+  if (parts[0] && /x/i.test(parts[0]) && !has("sin") && !has("cos") && !has("tan")) {
+    const source = exprKeys(parts[0])?.source || parts[0];
+    if (rootsOf(source).length) return tag(zeroPlan(original, parts[0]), `Zero of ${parts[0]}`);
+    return tag(graphOnly(original, parts[0]), `Graph ${parts[0]}`);
+  }
+
+  const bare = original.replace(/^(?:calculate|compute|evaluate|what is|whats|what's)\s+/i, "").replace(/\?$/, "");
+  if (/[0-9xπ√(]/i.test(bare) && exprKeys(bare)) return tag(homePlan(original, bare), bare);
+  return { error: "Add the math too. A zero, a list of numbers, or an area all work, even with typos." };
+}
+
+export function rehearsal(plan: Plan): Os {
+  return plan.steps.flatMap((step) => step.keys).reduce((state, key) => press(state, key.id), createOs());
+}
+
+export function screenNote(state: Os) {
+  if (state.screen === "error") return state.error;
+  if (state.results) return [state.results.title, ...state.results.lines].join("\n");
+  const last = state.history.at(-1);
+  if (last && state.screen === "home") return `${last.expr}\n${last.result}`;
+  if (state.mark && state.traceX !== null) {
+    const y = evalGraph(state.equations[0], state.traceX, { angle: state.angle, vars: state.vars, ans: state.ans, lists: state.lists, matrices: state.matrices, equations: state.equations, regEq: state.regEq });
+    return `${state.mark}\nX=${formatTi(state.traceX, state.notation, state.digits)}  Y=${y === null ? "" : formatTi(y, state.notation, state.digits)}`;
+  }
+  if (state.screen === "table") return "Table";
+  return "";
+}
