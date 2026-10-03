@@ -1037,3 +1037,63 @@ function refineExtremum(eq: string, x: number, kind: string, env: ReturnType<typ
   }
   return (left + right) / 2;
 }
+
+function finishGraph(state: Os, kind: string, x: number): Os {
+  const labels: Record<string, string> = { zero: "Zero", min: "Minimum", max: "Maximum", intersect: "Intersection" };
+  const at = Math.abs(x) < 1e-4 ? 0 : x;
+  return { ...state, screen: "graph", menu: null, bound: null, traceX: at, trace: xToIndex(state, at), traceEq: 0, mark: labels[kind] || "Calc" };
+}
+
+function xToIndex(state: Os, x: number) {
+  const span = state.win.xmax - state.win.xmin || 1;
+  return Math.max(0, Math.min(94, Math.round(((x - state.win.xmin) / span) * 94)));
+}
+
+function solveField(state: Os): Os {
+  if (state.tvm.cursor > 4) return state;
+  const unknown = (["N", "I", "PV", "PMT", "FV"] as const)[state.tvm.cursor];
+  try {
+    const num = (text: string) => readValue(text || "0", envOf(state));
+    const value = solveTvm(unknown, {
+      n: num(state.tvm.n), iPct: num(state.tvm.i), pv: num(state.tvm.pv), pmt: num(state.tvm.pmt), fv: num(state.tvm.fv),
+      py: num(state.tvm.py), cy: num(state.tvm.cy), begin: state.tvm.begin,
+    });
+    const key = TVM_KEYS[state.tvm.cursor];
+    return { ...state, tvm: { ...state.tvm, [key]: formatTi(value, state.notation, state.digits), edit: false } };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+
+function runProgram(state: Os, index: number): Os {
+  const program = state.programs[index];
+  if (!program) return state;
+  let current: Os = { ...state, screen: "home", menu: null };
+  const shown: string[] = [];
+  for (const line of program.lines) {
+    const code = line.trim();
+    if (!code || code === "Pause" || code === "ClrHome") continue;
+    const expr = code.startsWith("Disp ") ? code.slice(5) : code === "Disp" ? "Ans" : "";
+    try {
+      const result = run(expr || code, envOf(current), current.notation, current.digits);
+      current = absorb(current, result.env);
+      if (expr) shown.push(result.text);
+    } catch (error) {
+      return fail(current, error instanceof CalcError ? error.kind : "ERROR");
+    }
+  }
+  return showResults(current, program.name, shown.length ? shown : ["Done"]);
+}
+
+function absorb(state: Os, env: Env): Os {
+  return { ...state, vars: env.vars, ans: env.ans, lists: env.lists, matrices: env.matrices, equations: env.equations, regEq: env.regEq };
+}
+
+export function tracePoint(state: Os) {
+  if (state.trace === null && state.traceX === null) return null;
+  const span = state.win.xmax - state.win.xmin || 1;
+  const x = state.traceX ?? state.win.xmin + ((state.trace || 0) * span) / 94;
+  const expr = state.equations[state.traceEq] || "";
+  const y = expr.trim() ? evalGraph(expr, x, envOf(state)) : null;
+  return { x, y, name: `Y${state.traceEq + 1}` };
+}
