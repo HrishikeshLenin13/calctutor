@@ -719,3 +719,185 @@ function activate(state: Os, action: string): Os {
   if (action.startsWith("runprog:")) return runProgram(state, Number(action.slice(8)));
   return state;
 }
+
+function paste(state: Os, text: string): Os {
+  const screen = state.origin === "yeq" ? "yeq" : "home";
+  return typeInto({ ...state, screen, menu: null, catalogQ: "" }, text);
+}
+
+function jumpCatalog(state: Os, letter: string): Os {
+  const q = (state.catalogQ + letter).toLowerCase();
+  return { ...state, catalogQ: q, catalogI: 0 };
+}
+
+function typeInto(state: Os, text: string): Os {
+  if (state.screen === "home") {
+    const edit = ins(state.entry, state.cursor, text, state.insert);
+    return { ...state, entry: edit.buf, cursor: edit.cursor, recall: state.stack.length, draft: edit.buf };
+  }
+  if (state.screen === "yeq" && state.yRow > 0) {
+    const equations = [...state.equations] as [string, string, string];
+    const edit = ins(equations[state.yRow - 1], state.yCursor, text, true);
+    equations[state.yRow - 1] = edit.buf;
+    return { ...state, equations, yCursor: edit.cursor };
+  }
+  if (state.screen === "window" || state.screen === "tblset") {
+    const buf = state.winEdit ? state.winBuf + text : text;
+    return { ...state, winEdit: true, winBuf: buf };
+  }
+  if (state.screen === "lists") return { ...state, listEdit: true, listBuf: state.listEdit ? state.listBuf + text : text };
+  if (state.screen === "matrix") return { ...state, matEdit: true, matBuf: state.matEdit ? state.matBuf + text : text };
+  if (state.screen === "prompt" && state.prompt) return { ...state, prompt: { ...state.prompt, value: state.prompt.value + text } };
+  if (state.screen === "tvm" && state.tvm.cursor < 7) {
+    const key = TVM_KEYS[state.tvm.cursor];
+    const current = state.tvm.edit ? state.tvm[key] + text : text;
+    return { ...state, tvm: { ...state.tvm, [key]: current, edit: true } };
+  }
+  if (state.screen === "editor" && state.editor) {
+    const edit = ins(state.editor.buf, state.editor.cursor, text, true);
+    return { ...state, editor: { ...state.editor, buf: edit.buf, cursor: edit.cursor } };
+  }
+  if (state.screen === "catalog" && /[A-Za-z]/.test(text)) return jumpCatalog(state, text.toUpperCase());
+  return state;
+}
+
+const TVM_KEYS = ["n", "i", "pv", "pmt", "fv", "py", "cy"] as const;
+
+function backspace(state: Os): Os {
+  if (state.screen === "home") return applyEntry(state, delBefore(state.entry, state.cursor));
+  if (state.screen === "yeq" && state.yRow > 0) return yeqKey({ ...state, yCursor: Math.max(0, state.yCursor) }, "del");
+  if (state.screen === "prompt" && state.prompt) return { ...state, prompt: { ...state.prompt, value: state.prompt.value.slice(0, -1) } };
+  if (state.screen === "lists" && state.listEdit) return { ...state, listBuf: state.listBuf.slice(0, -1) };
+  if (state.screen === "window" && state.winEdit) return { ...state, winBuf: state.winBuf.slice(0, -1) };
+  if (state.screen === "editor" && state.editor) return editorKey(state, "del");
+  return press(state, "del");
+}
+
+function ins(buf: string, cursor: number, text: string, insert: boolean) {
+  if (insert || cursor >= buf.length) return { buf: buf.slice(0, cursor) + text + buf.slice(cursor), cursor: cursor + text.length };
+  return { buf: buf.slice(0, cursor) + text + buf.slice(cursor + 1), cursor: cursor + text.length };
+}
+function delAt(buf: string, cursor: number) {
+  if (cursor < buf.length) return { buf: buf.slice(0, cursor) + buf.slice(cursor + 1), cursor };
+  return delBefore(buf, cursor);
+}
+function delBefore(buf: string, cursor: number) {
+  if (cursor <= 0) return { buf, cursor };
+  return { buf: buf.slice(0, cursor - 1) + buf.slice(cursor), cursor: cursor - 1 };
+}
+function applyEntry(state: Os, edit: { buf: string; cursor: number }) {
+  return { ...state, entry: edit.buf, cursor: edit.cursor, draft: edit.buf, recall: state.stack.length };
+}
+
+function winValue(state: Os) {
+  return [state.win.xmin, state.win.xmax, state.win.xscl, state.win.ymin, state.win.ymax, state.win.yscl][state.winRow];
+}
+function commitWindow(state: Os) {
+  if (!state.winEdit || !state.winBuf.trim()) return state;
+  try {
+    const value = readValue(state.winBuf, envOf(state));
+    const keys = ["xmin", "xmax", "xscl", "ymin", "ymax", "yscl"] as const;
+    return { ...state, win: { ...state.win, [keys[state.winRow]]: value }, winEdit: false };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+function commitTbl(state: Os) {
+  if (!state.winEdit || !state.winBuf.trim()) return state;
+  try {
+    const value = readValue(state.winBuf, envOf(state));
+    return state.winRow > 0 ? { ...state, tblStep: value || 1, winEdit: false } : { ...state, tblStart: value, winEdit: false };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+function commitList(state: Os) {
+  if (!state.listEdit) return state;
+  const name = `L${state.listCol + 1}`;
+  const list = [...(state.lists[name] || [])];
+  if (!state.listBuf.trim()) return { ...state, listEdit: false, listBuf: "" };
+  try {
+    const value = readValue(state.listBuf, envOf(state));
+    while (list.length < state.listRow) list.push(0);
+    list[state.listRow] = value;
+    return { ...state, lists: { ...state.lists, [name]: list }, listEdit: false, listBuf: "" };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+function deleteListCell(state: Os) {
+  const name = `L${state.listCol + 1}`;
+  const list = [...(state.lists[name] || [])];
+  if (state.listRow >= list.length) return state;
+  list.splice(state.listRow, 1);
+  return { ...state, lists: { ...state.lists, [name]: list } };
+}
+function commitMatrix(state: Os) {
+  if (!state.matEdit || !state.matBuf.trim()) return { ...state, matEdit: false };
+  try {
+    const value = readValue(state.matBuf, envOf(state));
+    const matrix = state.matrices[state.mat].map((row) => [...row]);
+    if (matrix[state.matRow]) matrix[state.matRow][state.matCol] = value;
+    return { ...state, matrices: { ...state.matrices, [state.mat]: matrix }, matEdit: false, matBuf: "" };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+function commitTvm(state: Os) {
+  if (!state.tvm.edit || state.tvm.cursor > 6) return { ...state, tvm: { ...state.tvm, edit: false } };
+  const key = TVM_KEYS[state.tvm.cursor];
+  try {
+    readValue(state.tvm[key] || "0", envOf(state));
+    return { ...state, tvm: { ...state.tvm, edit: false } };
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
+
+function cycleWizardList(state: Os, dir: number): Os {
+  if (!state.wizard) return state;
+  const names = ["L1", "L2", "L3", "L4", "L5", "L6"];
+  const field = state.wizard.kind === "1var" ? "list" : state.wizard.field === 0 ? "list" : "list2";
+  if (state.wizard.field > 1) return state;
+  const current = names.indexOf(state.wizard[field]);
+  const next = names[(current + dir + names.length) % names.length];
+  return { ...state, wizard: { ...state.wizard, [field]: next } };
+}
+
+function runWizard(state: Os): Os {
+  if (!state.wizard) return state;
+  try {
+    const x = state.lists[state.wizard.list] || [];
+    const y = state.lists[state.wizard.list2] || [];
+    if (state.wizard.kind === "1var") {
+      const stats = oneVarStats(x);
+      const line = (label: string, value: number | null) => `${label}=${value === null ? "" : formatTi(value, state.notation, state.digits)}`;
+      return showResults(state, "1-Var Stats", [line("x̄", stats.mean), line("Σx", stats.sum), line("Σx²", stats.sumSq), line("Sx", stats.sx), line("σx", stats.ox), line("n", stats.n), line("minX", stats.min), line("Q1", stats.q1), line("Med", stats.med), line("Q3", stats.q3), line("maxX", stats.max)]);
+    }
+    if (x.length !== y.length || x.length < 2) return fail(state, "DIM MISMATCH");
+    if (state.wizard.kind === "2var") {
+      const xs = oneVarStats(x);
+      const ys = oneVarStats(y);
+      const line = (label: string, value: number | null) => `${label}=${value === null ? "" : formatTi(value, state.notation, state.digits)}`;
+      return showResults(state, "2-Var Stats", [line("x̄", xs.mean), line("ȳ", ys.mean), line("Σx", xs.sum), line("Σy", ys.sum), line("Sx", xs.sx), line("Sy", ys.sx), line("n", xs.n)]);
+    }
+    const fit = linReg(x, y);
+    const regEq = fit.intercept < 0 && state.wizard.kind === "lin"
+      ? `${formatTi(fit.slope)}X−${formatTi(Math.abs(fit.intercept))}`
+      : state.wizard.kind === "lin"
+        ? `${formatTi(fit.slope)}X+${formatTi(fit.intercept)}`
+        : `${formatTi(fit.intercept)}+${formatTi(fit.slope)}X`;
+    const a = state.wizard.kind === "lin" ? fit.slope : fit.intercept;
+    const b = state.wizard.kind === "lin" ? fit.intercept : fit.slope;
+    return showResults({ ...state, regEq }, state.wizard.kind === "lin" ? "LinReg(ax+b)" : "LinReg(a+bx)", [
+      state.wizard.kind === "lin" ? "y=ax+b" : "y=a+bx",
+      `a=${formatTi(a, state.notation, state.digits)}`,
+      `b=${formatTi(b, state.notation, state.digits)}`,
+      `r²=${formatTi(fit.r2, state.notation, state.digits)}`,
+      `r=${formatTi(fit.r, state.notation, state.digits)}`,
+      "RegEQ stored",
+    ]);
+  } catch (error) {
+    return fail(state, error instanceof CalcError ? error.kind : "ERROR");
+  }
+}
