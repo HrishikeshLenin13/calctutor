@@ -603,3 +603,119 @@ function editorKey(state: Os, key: KeyId): Os {
   const text = PRIMARY[key];
   return text ? typeInto(state, text) : state;
 }
+
+function toggleRow(state: Os, key: KeyId, field: "formatRow" | "statRow", count: number, toggle: (row: number) => Os): Os {
+  const row = state[field];
+  if (key === "up") return { ...state, [field]: (row + count - 1) % count };
+  if (key === "down") return { ...state, [field]: (row + 1) % count };
+  if (key === "enter" || key === "left" || key === "right") return toggle(row);
+  return state;
+}
+
+function menuKey(state: Os, key: KeyId): Os | null {
+  if (!state.menu) return null;
+  const tab = state.menu.tabs[state.menu.tab];
+  if (key === "up") return { ...state, menu: { ...state.menu, index: (state.menu.index + tab.items.length - 1) % tab.items.length } };
+  if (key === "down") return { ...state, menu: { ...state.menu, index: (state.menu.index + 1) % tab.items.length } };
+  if ((key === "left" || key === "right") && state.menu.tabs.length > 1) {
+    const tabIndex = (state.menu.tab + (key === "right" ? 1 : state.menu.tabs.length - 1)) % state.menu.tabs.length;
+    return { ...state, menu: { ...state.menu, tab: tabIndex, index: 0 } };
+  }
+  if (key === "enter") return activate(state, tab.items[state.menu.index]?.action || "");
+  const item = ITEM_KEY[key];
+  if (item && tab.items[item - 1]) return activate(state, tab.items[item - 1].action);
+  return null;
+}
+
+function openMenu(state: Os, id: string): Os {
+  const origin = state.screen === "yeq" ? "yeq" : "home";
+  return { ...state, screen: "menu", origin, menu: buildMenu(state, id) };
+}
+
+function buildMenu(state: Os, id: string): Menu {
+  const tabs = MENUS(state)[id] || [{ name: id.toUpperCase(), items: [] }];
+  return { id, tabs, tab: 0, index: 0 };
+}
+
+function MENUS(state: Os): Record<string, { name: string; items: Item[] }[]> {
+  const paste = (label: string, text = label) => ({ label, action: `paste:${text}` });
+  return {
+    math: [
+      { name: "MATH", items: [paste("►Frac", "►Frac"), paste("³", "³"), paste("³√("), paste("nDeriv("), paste("fnInt("), paste("solve(")] },
+      { name: "NUM", items: [paste("abs("), paste("round("), paste("iPart("), paste("fPart("), paste("min("), paste("max(")] },
+      { name: "PRB", items: [paste("rand", "rand"), paste("randInt("), paste("nPr("), paste("nCr("), paste("!", "!")] },
+    ],
+    test: [{ name: "TEST", items: ["=", "≠", ">", "≥", "<", "≤"].map((token) => paste(token)) }],
+    angle: [{ name: "ANGLE", items: [paste("°", "°")] }],
+    stat: [
+      { name: "EDIT", items: [{ label: "Edit...", action: "go:lists" }, paste("SortA("), paste("SortD("), paste("ClrList "), { label: "SetUpEditor", action: "paste:SetUpEditor" }] },
+      { name: "CALC", items: [
+        { label: "1-Var Stats", action: "wiz:1var" },
+        { label: "2-Var Stats", action: "wiz:2var" },
+        { label: "Med-Med", action: "gap:Med-Med" },
+        { label: "LinReg(ax+b)", action: "wiz:lin" },
+        { label: "QuadReg", action: "gap:QuadReg" },
+        { label: "CubicReg", action: "gap:CubicReg" },
+        { label: "QuartReg", action: "gap:QuartReg" },
+        { label: "LinReg(a+bx)", action: "wiz:lina" },
+      ] },
+    ],
+    list: [
+      { name: "NAMES", items: ["L1", "L2", "L3", "L4", "L5", "L6"].map((name) => paste(name)) },
+      { name: "OPS", items: [paste("SortA("), paste("SortD("), paste("ClrList ")] },
+      { name: "MATH", items: [paste("sum("), paste("mean("), paste("median("), paste("stdDev(")] },
+    ],
+    distr: [{ name: "DISTR", items: [
+      paste("normalpdf("), paste("normalcdf("), paste("invNorm("),
+      { label: "invT(", action: "gap:invT(" },
+      { label: "tpdf(", action: "gap:tpdf(" },
+      { label: "tcdf(", action: "gap:tcdf(" },
+      { label: "χ²pdf(", action: "gap:χ²pdf(" },
+      { label: "χ²cdf(", action: "gap:χ²cdf(" },
+      { label: "Fpdf(", action: "gap:Fpdf(" },
+      { label: "Fcdf(", action: "gap:Fcdf(" },
+      paste("binompdf("), paste("binomcdf("), paste("poissonpdf("), paste("poissoncdf("),
+    ] }],
+    vars: [{ name: "VARS", items: [paste("Y1"), paste("Y2"), paste("Y3"), paste("RegEQ"), paste("X")] }],
+    apps: [{ name: "APPS", items: [{ label: "Finance...", action: "go:tvm" }] }],
+    prgm: [{ name: "EXEC", items: [...state.programs.map((program, index) => ({ label: program.name, action: `runprog:${index}` })), { label: "New", action: "prog:new" }] }],
+    zoom: [{ name: "ZOOM", items: ["ZBox", "Zoom In", "Zoom Out", "ZDecimal", "ZSquare", "ZStandard", "ZTrig", "ZInteger", "ZoomStat"].map((label, index) => ({ label, action: `zoom:${["box", "in", "out", "decimal", "square", "standard", "trig", "integer", "stat"][index]}` })) }],
+    calc: [{ name: "CALCULATE", items: [{ label: "value", action: "calc:value" }, { label: "zero", action: "calc:zero" }, { label: "minimum", action: "calc:min" }, { label: "maximum", action: "calc:max" }, { label: "intersect", action: "calc:intersect" }] }],
+    draw: [{ name: "DRAW", items: [{ label: "ClrDraw", action: "cmd:clrdraw" }, { label: "Horizontal", action: "ask:h" }, { label: "Vertical", action: "ask:v" }] }],
+    matrix: [
+      { name: "NAMES", items: [paste("[A]"), paste("[B]"), paste("[C]")] },
+      { name: "MATH", items: [paste("det(")] },
+      { name: "EDIT", items: ["A", "B", "C"].map((name) => ({ label: `[${name}]`, action: `mat:${name}` })) },
+    ],
+    memory: [{ name: "MEM", items: [{ label: "About", action: "go:about" }, { label: "Reset RAM", action: "cmd:reset" }] }],
+  };
+}
+
+function activate(state: Os, action: string): Os {
+  if (!action) return state;
+  if (action.startsWith("paste:")) return paste(state, action.slice(6));
+  if (action.startsWith("go:")) {
+    const screen = action.slice(3);
+    if (screen === "lists") return { ...state, screen: "lists", menu: null, listEdit: false };
+    if (screen === "tvm") return { ...state, screen: "tvm", menu: null };
+    if (screen === "about") return { ...state, screen: "results", menu: null, results: { title: "About", lines: ["TI-84 Plus CE", "5.7.2.0016", "", "Study calculator", "Local math engine"], top: 0 } };
+    return { ...state, screen, menu: null };
+  }
+  if (action.startsWith("gap:")) return showResults(state, action.slice(4), ["Listed here so the menu", "numbers match class.", "LinReg(ax+b) is 4.", "binompdf( is A."]);
+  if (action.startsWith("wiz:")) {
+    const kind = action.slice(4) as NonNullable<Os["wizard"]>["kind"];
+    return { ...state, screen: "wizard", menu: null, wizard: { kind, list: "L1", list2: "L2", field: 0 } };
+  }
+  if (action.startsWith("zoom:")) return applyZoom(state, action.slice(5));
+  if (action.startsWith("calc:")) return startCalc(state, action.slice(5));
+  if (action === "cmd:clrdraw") return { ...state, draws: [], screen: "graph", menu: null };
+  if (action === "cmd:reset") return createOs();
+  if (action === "ask:h" || action === "ask:v") return { ...state, screen: "prompt", menu: null, prompt: { kind: action.slice(4), title: action.endsWith("h") ? "Y=" : "X=", value: "" } };
+  if (action.startsWith("mat:")) return { ...state, screen: "matrix", menu: null, mat: action.slice(4) as "A" | "B" | "C", matRow: 0, matCol: 0, matEdit: false };
+  if (action === "prog:new") {
+    const programs = [...state.programs, { name: `PRGM${state.programs.length + 1}`, lines: [""] }];
+    return { ...state, programs, screen: "editor", menu: null, editor: { index: programs.length - 1, row: 0, buf: "", cursor: 0 } };
+  }
+  if (action.startsWith("runprog:")) return runProgram(state, Number(action.slice(8)));
+  return state;
+}
