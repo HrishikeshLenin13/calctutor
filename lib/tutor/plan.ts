@@ -357,3 +357,31 @@ function invPlan(text: string, area: number, mean: number, sd: number): Interpre
     ],
   };
 }
+
+function listEntry(values: number[], column: "L1" | "L2"): Beat {
+  const keys: Stroke[] = [];
+  values.forEach((value) => keys.push(...numberKeys(value), stroke("enter", "enter")));
+  return {
+    title: column === "L1" ? "Type the data into L1" : "Type the y-values into L2",
+    why: column === "L1"
+      ? "Each number, then enter. Enter commits the cell and moves down. The blank row under the last value is normal."
+      : "Arrow up to row 1 before leaving L1, then right into L2. Right stays on the same row, so starting lower would pad L2 with zeros.",
+    keys,
+  };
+}
+
+function statsPlan(text: string, values: number[]): Interpret {
+  if (values.length < 2) return { error: "1-Var Stats needs at least two numbers." };
+  return {
+    title: "One-variable statistics",
+    problem: text,
+    steps: [
+      wake(),
+      { title: "Open the list editor", why: "stat, then 1:Edit. L1 is the first column. This is where the data lives; the home screen is the wrong place for a list.", keys: [stroke("stat", "stat"), stroke("n1", "1")] },
+      listEntry(values, "L1"),
+      { title: "Quit to the home screen", why: "2nd, then mode, is quit. The list stays in memory. Quit does not clear L1.", keys: [stroke("2nd", "2nd"), stroke("mode", "mode")] },
+      { title: "Choose 1-Var Stats", why: "stat, then the right arrow, opens CALC. 1-Var Stats is option 1.", keys: [stroke("stat", "stat"), stroke("right", "right"), stroke("n1", "1")] },
+      { title: "Move to Calculate", why: "The cursor starts on the list name. Down moves to Calculate. Enter runs it. x̄ is the mean. Sx is the sample standard deviation.", keys: [stroke("down", "down"), stroke("enter", "enter")] },
+    ],
+  };
+}
