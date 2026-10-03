@@ -426,3 +426,42 @@ function marker(index: number) {
   if (number === 10) return "0";
   return String.fromCharCode(64 + number - 10);
 }
+
+function Key({ id, face, second, alpha, tone, top = "blue", label, onPress, held, small, num, highlight }: {
+  id: KeyId; face: React.ReactNode; second?: React.ReactNode; alpha?: React.ReactNode; tone: string; top?: "blue" | "green"; label: string; onPress: (id: KeyId) => void; held: boolean; small?: boolean; num?: boolean; highlight?: KeyId | null;
+}) {
+  return (
+    <div className={styles.slot}>
+      <div className={styles.legend} aria-hidden="true">
+        <span className={top === "green" ? styles.green : styles.blue}>{second}</span>
+        <span className={styles.green}>{alpha}</span>
+      </div>
+      <button type="button" className={`${styles.key} ${styles[tone]} ${num ? styles.num : ""} ${small ? styles.tiny : ""} ${held ? styles.held : ""} ${highlight === id ? styles.next : ""}`} aria-label={label} onMouseDown={(event) => event.preventDefault()} onClick={() => onPress(id)}>
+        {face}
+      </button>
+    </div>
+  );
+}
+
+function Dpad({ onPress, highlight }: { onPress: (id: KeyId) => void; highlight?: KeyId | null }) {
+  return <div className={styles.dpad} aria-hidden="false">
+    <button type="button" className={`${styles.quad} ${styles.up} ${highlight === "up" ? styles.next : ""}`} aria-label="up" onMouseDown={(event) => event.preventDefault()} onClick={() => onPress("up")}><Chevron dir="up" /></button>
+    <button type="button" className={`${styles.quad} ${styles.left} ${highlight === "left" ? styles.next : ""}`} aria-label="left" onMouseDown={(event) => event.preventDefault()} onClick={() => onPress("left")}><Chevron dir="left" /></button>
+    <button type="button" className={`${styles.quad} ${styles.right} ${highlight === "right" ? styles.next : ""}`} aria-label="right" onMouseDown={(event) => event.preventDefault()} onClick={() => onPress("right")}><Chevron dir="right" /></button>
+    <button type="button" className={`${styles.quad} ${styles.down} ${highlight === "down" ? styles.next : ""}`} aria-label="down" onMouseDown={(event) => event.preventDefault()} onClick={() => onPress("down")}><Chevron dir="down" /></button>
+    <span className={styles.hub} />
+  </div>;
+}
+
+function Chevron({ dir }: { dir: "up" | "down" | "left" | "right" }) {
+  const turn = { up: 0, right: 90, down: 180, left: 270 }[dir];
+  return <svg width="14" height="9" viewBox="0 0 12 8" style={{ transform: `rotate(${turn}deg)` }} aria-hidden="true"><path d="M1 6.5 L6 1.5 L11 6.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
+}
+
+function Battery() {
+  return <svg className={styles.battery} width="18" height="10" viewBox="0 0 18 10" aria-hidden="true"><rect x="0.6" y="0.6" width="14.2" height="8.8" rx="1.2" fill="none" stroke="#222" strokeWidth="1" /><rect x="15.4" y="3" width="1.6" height="4" rx="0.4" fill="#222" /><rect x="2" y="2" width="11.4" height="6" rx="0.5" fill="#3cba4a" /></svg>;
+}
+
+function Mark() {
+  return <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 0.8 L7.7 4.8 L11.8 6 L7.7 7.2 L6.5 11.2 L5.3 7.2 L1.2 6 L5.3 4.8 Z" fill="#d5d5d5" /></svg>;
+}
