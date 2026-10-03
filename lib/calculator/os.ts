@@ -201,3 +201,132 @@ export function hydrate(raw: unknown): Os {
   next.recall = next.stack?.length || 0;
   return next;
 }
+
+export function press(state: Os, key: KeyId): Os {
+  if (state.screen === "off") return key === "on" ? { ...state, screen: "home", second: false, alpha: "off" } : state;
+  if (state.screen === "boot") return { ...state, screen: "home", second: false, alpha: "off" };
+  if (key === "2nd") return { ...state, second: !state.second, alpha: state.alpha === "once" ? "off" : state.alpha };
+  if (key === "alpha") {
+    if (state.second) return { ...state, second: false, alpha: "lock" };
+    return { ...state, alpha: state.alpha === "off" ? "once" : "off" };
+  }
+  const second = state.second;
+  const alpha = !second && state.alpha !== "off";
+  const base: Os = { ...state, second: false, alpha: state.alpha === "lock" ? "lock" : "off" };
+  if (alpha) return onAlpha(base, key);
+  if (second) return onSecond(base, key);
+  return onPrimary(base, key);
+}
+
+export function typeChar(state: Os, ch: string): Os {
+  if (state.screen === "off") return state;
+  if (state.screen === "boot") state = { ...state, screen: "home" };
+  if (ch === "Enter") return press(state, "enter");
+  if (ch === "Backspace") return backspace(state);
+  if (ch === "Escape") return press({ ...state, second: false, alpha: state.alpha }, "clear");
+  if (ch === "ArrowLeft") return press(state, "left");
+  if (ch === "ArrowRight") return press(state, "right");
+  if (ch === "ArrowUp") return press(state, "up");
+  if (ch === "ArrowDown") return press(state, "down");
+  if (ch === "Delete") return press(state, "del");
+  if (ch === "*") return press(state, "mul");
+  if (ch === "/") return press(state, "div");
+  if (ch === "+") return press(state, "add");
+  if (ch === "-") return typeInto(state, "−");
+  if (ch === "^") return press(state, "pow");
+  if (ch === "(") return press(state, "lparen");
+  if (ch === ")") return press(state, "rparen");
+  if (ch === ",") return press(state, "comma");
+  if (ch === ".") return press(state, "dot");
+  if (/^[0-9]$/.test(ch)) return press(state, `n${ch}` as KeyId);
+  if (ch === "x" || ch === "X") return typeInto(state, "X");
+  if (/^[A-Za-zθπ√°]|[⁻²]/.test(ch) || ch === "⁻") return typeInto(state, ch === "π" ? "π" : ch);
+  return state;
+}
+
+function onAlpha(state: Os, key: KeyId): Os {
+  if (state.screen === "tvm" && key === "enter") return solveField(state);
+  if (state.rcl) {
+    const letter = ALPHA[key];
+    if (letter && /^[A-Zθ]$/.test(letter)) return typeInto({ ...state, rcl: false }, letter);
+    return { ...state, rcl: false };
+  }
+  const text = ALPHA[key];
+  if (!text) return state;
+  if (state.screen === "catalog" && text.length === 1 && /[A-Z]/.test(text)) return jumpCatalog(state, text);
+  return typeInto(state, text);
+}
+
+function onSecond(state: Os, key: KeyId): Os {
+  if (key === "mode") return home(state);
+  if (key === "on") return { ...state, screen: "off", trace: null };
+  if (key === "del") return { ...state, insert: !state.insert };
+  if (key === "enter") return state.screen === "home" ? recall(state, -1) : state;
+  if (key === "y=") return { ...state, screen: "statplot" };
+  if (key === "window") return { ...state, screen: "tblset", winRow: 0, winEdit: false, winBuf: "" };
+  if (key === "zoom") return { ...state, screen: "format" };
+  if (key === "trace") return openMenu(state, "calc");
+  if (key === "graph") return { ...state, screen: "table" };
+  if (key === "stat") return openMenu(state, "list");
+  if (key === "math") return openMenu(state, "test");
+  if (key === "apps") return openMenu(state, "angle");
+  if (key === "prgm") return openMenu(state, "draw");
+  if (key === "vars") return openMenu(state, "distr");
+  if (key === "inv") return openMenu(state, "matrix");
+  if (key === "add") return openMenu(state, "memory");
+  if (key === "n0") return { ...state, screen: "catalog", catalogQ: "", catalogI: 0, origin: state.screen === "yeq" ? "yeq" : "home" };
+  if (key === "xt") return { ...state, screen: "link" };
+  if (key === "sto") return { ...state, rcl: true };
+  const text = SECOND_TEXT[key];
+  return text ? typeInto(state, text) : state;
+}
+
+function onPrimary(state: Os, key: KeyId): Os {
+  if (state.screen === "error") return errorKey(state, key);
+  if (state.rcl && key !== "clear") {
+    if (key === "xt") return typeInto({ ...state, rcl: false }, "X");
+    return { ...state, rcl: false };
+  }
+  if (state.screen === "menu") {
+    const handled = menuKey(state, key);
+    if (handled) return handled;
+  }
+  if (key === "on") return home(state);
+  if (key === "clear") return onClear(state);
+  if (key === "mode") return { ...state, screen: "mode", modeRow: 0, modeCol: 0 };
+  if (key === "y=") return { ...state, screen: "yeq", yRow: 1, yCursor: state.equations[0].length };
+  if (key === "window") return { ...state, screen: "window", winRow: 0, winEdit: false, winBuf: "" };
+  if (key === "zoom") return openMenu(state, "zoom");
+  if (key === "trace") return { ...state, screen: "graph", trace: state.trace ?? 47, traceX: null };
+  if (key === "graph") return showGraph(state);
+  if (key === "math") return openMenu(state, "math");
+  if (key === "apps") return openMenu(state, "apps");
+  if (key === "prgm") return openMenu(state, "prgm");
+  if (key === "vars") return openMenu(state, "vars");
+  if (key === "stat") return openMenu(state, "stat");
+  return screenKey(state, key);
+}
+
+function screenKey(state: Os, key: KeyId): Os {
+  switch (state.screen) {
+    case "home": return homeKey(state, key);
+    case "mode": return modeKey(state, key);
+    case "yeq": return yeqKey(state, key);
+    case "window": return windowKey(state, key);
+    case "tblset": return tblKey(state, key);
+    case "lists": return listKey(state, key);
+    case "catalog": return catalogKey(state, key);
+    case "graph": return graphKey(state, key);
+    case "table": return tableKey(state, key);
+    case "results": return resultKey(state, key);
+    case "prompt": return promptKey(state, key);
+    case "wizard": return wizardKey(state, key);
+    case "tvm": return tvmKey(state, key);
+    case "matrix": return matrixKey(state, key);
+    case "editor": return editorKey(state, key);
+    case "format": return toggleRow(state, key, "formatRow", 2, (row) => row === 0 ? { ...state, grid: !state.grid } : { ...state, axes: !state.axes });
+    case "statplot": return toggleRow(state, key, "statRow", 1, () => ({ ...state, plot1: !state.plot1 }));
+    case "link": return key === "enter" ? home(state) : state;
+    default: return state;
+  }
+}
