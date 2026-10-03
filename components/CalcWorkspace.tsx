@@ -257,3 +257,95 @@ function Catalog({ os }: { os: Os }) {
     {items.slice(start, start + 8).map((item, offset) => <div key={item.label} className={start + offset === index ? styles.on : ""}>{item.label}</div>)}
   </div>;
 }
+
+function Yeq({ os }: { os: Os }) {
+  return <div>
+    <div className={os.yRow === 0 ? styles.on : ""}>Plot1:{os.plot1 ? "On" : "Off"}</div>
+    {os.equations.map((equation, index) => <div key={index}>{os.eqOn[index] ? "\\" : " "}Y{index + 1}={os.yRow === index + 1 ? <Caret text={equation} cursor={os.yCursor} os={os} /> : equation}</div>)}
+  </div>;
+}
+
+function Fields({ title, rows, values, row, editing, buffer, os }: { title: string; rows: string[]; values: number[]; row: number; editing: boolean; buffer: string; os: Os }) {
+  return <div className={styles.mono}><div className={styles.menuTitle}>{title}</div>{rows.map((label, index) => <div key={label} className={index === row ? styles.on : ""}>{label}={index === row && editing ? buffer : formatTi(values[index] ?? 0, os.notation, os.digits)}</div>)}</div>;
+}
+
+function Lists({ os }: { os: Os }) {
+  const start = Math.max(0, Math.min(os.listCol - 1, 3));
+  const cols = [0, 1, 2].map((offset) => start + offset);
+  const rowStart = Math.max(0, os.listRow - 6);
+  return <div className={styles.mono}>
+    <div>{cols.map((col) => <span key={col} style={{ display: "inline-block", width: "7ch" }}>L{col + 1}</span>)}</div>
+    {Array.from({ length: 7 }, (_, offset) => rowStart + offset).map((row) => <div key={row}>{cols.map((col) => {
+      const list = os.lists[`L${col + 1}`] || [];
+      const active = os.listCol === col && os.listRow === row;
+      const text = active && os.listEdit ? os.listBuf : list[row] === undefined ? "" : formatTi(list[row], os.notation, os.digits);
+      return <span key={col} className={active ? styles.on : ""} style={{ display: "inline-block", width: "7ch" }}>{text || (active ? "█" : "")}</span>;
+    })}</div>)}
+  </div>;
+}
+
+function Table({ os }: { os: Os }) {
+  const env = envOf(os);
+  const shown = os.equations.map((equation, index) => equation.trim() && os.eqOn[index] ? index : -1).filter((index) => index >= 0);
+  const cols = shown.length ? shown : [0];
+  return <div className={styles.mono}>
+    <div>X{cols.map((index) => <span key={index}>    Y{index + 1}</span>)}</div>
+    {Array.from({ length: 7 }, (_, row) => {
+      const x = os.tblStart + (os.tableOffset + row) * os.tblStep;
+      return <div key={row}>{formatTi(x, os.notation, os.digits)}{cols.map((index) => {
+        const y = evalGraph(os.equations[index], x, env);
+        return <span key={index}>  {y === null ? "" : formatTi(y, os.notation, os.digits)}</span>;
+      })}</div>;
+    })}
+  </div>;
+}
+
+function Results({ os }: { os: Os }) {
+  const results = os.results;
+  if (!results) return null;
+  return <div><div className={styles.resultTitle}>{results.title}</div>{results.lines.slice(results.top, results.top + 8).map((line) => <div key={line}>{line}</div>)}</div>;
+}
+
+function Wizard({ os }: { os: Os }) {
+  const wizard = os.wizard;
+  if (!wizard) return null;
+  const names = { "1var": "1-Var Stats", "2var": "2-Var Stats", lin: "LinReg(ax+b)", lina: "LinReg(a+bx)" };
+  const calculate = wizard.kind === "1var" ? 1 : 2;
+  return <div>
+    <div className={styles.menuTitle}>{names[wizard.kind]}</div>
+    <div className={wizard.field === 0 ? styles.on : ""}>List:{wizard.list}</div>
+    {wizard.kind !== "1var" && <div className={wizard.field === 1 ? styles.on : ""}>{wizard.kind === "2var" ? "Ylist" : "Ylist"}:{wizard.list2}</div>}
+    <div className={wizard.field === calculate ? styles.on : ""}>Calculate</div>
+  </div>;
+}
+
+function Tvm({ os }: { os: Os }) {
+  const rows: [string, string][] = [["N", os.tvm.n], ["I%", os.tvm.i], ["PV", os.tvm.pv], ["PMT", os.tvm.pmt], ["FV", os.tvm.fv], ["P/Y", os.tvm.py], ["C/Y", os.tvm.cy]];
+  return <div className={styles.mono}>
+    {rows.map(([label, value], index) => <div key={label} className={os.tvm.cursor === index ? styles.on : ""}>{label}={value}{os.tvm.cursor === index && os.alpha !== "off" ? "  solve" : ""}</div>)}
+    <div className={os.tvm.cursor === 7 ? styles.on : ""}>PMT:{os.tvm.begin ? "BEGIN" : "END"}</div>
+  </div>;
+}
+
+function Matrix({ os }: { os: Os }) {
+  const matrix = os.matrices[os.mat];
+  return <div className={styles.mono}><div>[{os.mat}] {matrix.length}×{matrix[0]?.length || 0}</div>{matrix.map((row, r) => <div key={r}>{row.map((cell, c) => {
+    const active = os.matRow === r && os.matCol === c;
+    return <span key={c} className={active ? styles.on : ""} style={{ display: "inline-block", width: "8ch" }}>{active && os.matEdit ? os.matBuf : formatTi(cell)}</span>;
+  })}</div>)}</div>;
+}
+
+function Editor({ os }: { os: Os }) {
+  const editor = os.editor;
+  const program = editor ? os.programs[editor.index] : undefined;
+  if (!editor || !program) return null;
+  return <div><div className={styles.menuTitle}>PROGRAM:{program.name}</div>{program.lines.map((line, index) => <div key={index}>:{index === editor.row ? <Caret text={editor.buf} cursor={editor.cursor} os={os} /> : line}</div>)}</div>;
+}
+
+function ToggleList({ title, rows, row }: { os: Os; title: string; rows: string[]; row: number }) {
+  return <div><div className={styles.menuTitle}>{title}</div>{rows.map((label, index) => <div key={label} className={index === row ? styles.on : ""}>{label}</div>)}</div>;
+}
+
+function StatPlot({ os }: { os: Os }) {
+  return <div><div className={styles.menuTitle}>STAT PLOT</div><div className={styles.on}>Plot1:{os.plot1 ? "On" : "Off"}</div><div>Type: Scatter</div><div>Xlist:L1</div><div>Ylist:L2</div></div>;
+}
