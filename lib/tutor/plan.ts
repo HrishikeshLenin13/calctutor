@@ -273,3 +273,36 @@ function extremePlan(text: string, raw: string, kind: "min" | "max"): Interpret 
     ],
   };
 }
+
+function intersectPlan(text: string, left: string, right: string): Interpret {
+  const a = exprKeys(left);
+  const b = exprKeys(right);
+  if (!a || !b) return { error: "Write both equations, like intersection of x+1 and x^2." };
+  const crosses: number[] = [];
+  let prev: number | null = null;
+  let prevX = -10;
+  for (let i = 0; i <= 200; i++) {
+    const x = -10 + (i * 20) / 200;
+    const y1 = evalGraph(a.source, x, emptyEnv());
+    const y2 = evalGraph(b.source, x, emptyEnv());
+    if (y1 === null || y2 === null) { prev = null; continue; }
+    const diff = y1 - y2;
+    if (prev !== null && prev * diff <= 0) {
+      const root = prevX + (x - prevX) * (Math.abs(prev) / (Math.abs(prev) + Math.abs(diff) || 1));
+      if (!crosses.length || Math.abs(crosses[crosses.length - 1] - root) > 0.2) crosses.push(root);
+    }
+    prev = diff;
+    prevX = x;
+  }
+  const target = crosses.find((x) => x > -9.2 && x < 9.2);
+  if (target === undefined) return { error: "Those two graphs don't meet inside the standard window." };
+  return {
+    title: "Find an intersection",
+    problem: text,
+    steps: [
+      ...graphSetup(left, "both", right),
+      ...calcAsk("intersect", target, "intersect"),
+      { title: "Read the point", why: `X and Y are the same on both graphs. That point is the intersection.${crosses.length > 1 ? ` Another one is near x = ${formatTi(crosses.find((x) => Math.abs(x - target) > 0.2) || crosses[1])}. Run intersect again with the left bound past this x.` : ""}`, keys: [] },
+    ],
+  };
+}
