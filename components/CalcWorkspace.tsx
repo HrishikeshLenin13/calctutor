@@ -205,3 +205,55 @@ function Screen({ os, sheetRef }: { os: Os; sheetRef: React.RefObject<HTMLDivEle
     </div>
   );
 }
+
+function Home({ os }: { os: Os }) {
+  return <>
+    {os.rcl && <div>Rcl</div>}
+    {os.history.map((item, index) => <div key={`${item.expr}-${index}`}><div>{item.expr}</div>{item.result.split("\n").map((line) => <div className={styles.res} key={line}>{line}</div>)}</div>)}
+    <div><Caret text={os.entry} cursor={os.cursor} os={os} /></div>
+  </>;
+}
+
+function Caret({ text, cursor, os }: { text: string; cursor: number; os: Os }) {
+  if (os.insert) return <>{text.slice(0, cursor)}<span className={styles.insert}>_</span>{text.slice(cursor)}</>;
+  const ch = text[cursor] ?? "";
+  const tone = os.second ? styles.cursor2 : os.alpha !== "off" ? styles.cursorA : "";
+  const shown = ch || (os.second ? "↑" : os.alpha === "lock" ? "a" : os.alpha === "once" ? "A" : "");
+  return <>{text.slice(0, cursor)}<span className={`${styles.cursor} ${tone}`}>{shown}</span>{ch ? text.slice(cursor + 1) : null}</>;
+}
+
+function Mode({ os }: { os: Os }) {
+  return <div>{MODE_ROWS.map((row, r) => <div key={row.join()}>{row.map((label, c) => {
+    const selected = modeOn(os, r, c);
+    const focused = os.modeRow === r && os.modeCol === c;
+    return <span key={label} className={`${styles.choice} ${selected ? styles.on : ""}`}>{focused ? "▸" : " "}{label} </span>;
+  })}</div>)}</div>;
+}
+
+function ErrorScreen({ os }: { os: Os }) {
+  return <div><div>ERR:{os.error}</div><div className={styles.ram}> </div><div className={os.errorIndex === 0 ? styles.on : ""}>1:Quit</div><div className={os.errorIndex === 1 ? styles.on : ""}>2:Goto</div></div>;
+}
+
+function MenuScreen({ os }: { os: Os }) {
+  const menu = os.menu;
+  if (!menu) return null;
+  const tab = menu.tabs[menu.tab];
+  const start = Math.max(0, Math.min(menu.index - 7, tab.items.length - 8));
+  return <div>
+    {menu.tabs.length > 1 ? <div className={styles.tabs}>{menu.tabs.map((item, index) => <span key={item.name} className={index === menu.tab ? styles.tabOn : ""}>{item.name}</span>)}</div> : <div className={styles.menuTitle}>{tab.name}</div>}
+    {tab.items.slice(start, start + 8).map((item, offset) => {
+      const index = start + offset;
+      return <div key={item.label} className={index === menu.index ? styles.on : styles.item}>{marker(index)}:{item.label}</div>;
+    })}
+    {start + 8 < tab.items.length && <div className={styles.more}>▼</div>}
+  </div>;
+}
+
+function Catalog({ os }: { os: Os }) {
+  const { items, index } = catalogView(os);
+  const start = Math.max(0, Math.min(index - 7, items.length - 8));
+  return <div>
+    <div className={styles.menuTitle}>CATALOG {os.catalogQ}</div>
+    {items.slice(start, start + 8).map((item, offset) => <div key={item.label} className={start + offset === index ? styles.on : ""}>{item.label}</div>)}
+  </div>;
+}
