@@ -42,3 +42,7 @@ next-env.d.ts
 
 # local knowledge graph
 /graphify-out
+
+# agent instruction files, kept off the public repo
+/AGENTS.md
+/CLAUDE.md
