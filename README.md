@@ -63,6 +63,8 @@ The math runs on this machine. There is no call out to a calculation service. Te
 ## Run it
 
 ```bash
+git clone https://github.com/HrishikeshLenin13/calctutor.git
+cd calctutor
 npm install
 npm run dev
 ```
