@@ -19,7 +19,7 @@ import {
 import styles from "./ti84.module.css";
 
 const STORAGE_KEY = "calcTutor.standaloneCalculatorState";
-const COLORS = ["#2162c4", "#d23a2f", "#1f8a42"];
+const COLORS = ["#2162c4", "#d23a2f", "#1f8a42", "#e67e22", "#8e44ad", "#16a085"];
 
 export function CalcWorkspace({
   os: controlled,
@@ -64,10 +64,8 @@ export function CalcWorkspace({
     else setLocal((current) => press(current, id));
   }
   function onKeyDown(event: React.KeyboardEvent) {
-    if (!standalone) return;
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     if (event.key === "Tab") return;
-    if (event.key === " ") { event.preventDefault(); return; }
     if (event.key.length === 1 || ["Enter", "Backspace", "Escape", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Delete"].includes(event.key)) {
       event.preventDefault();
       setLocal((current) => typeChar(current, event.key));

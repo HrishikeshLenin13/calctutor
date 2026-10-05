@@ -53,18 +53,103 @@ function numberKeys(value: number): Stroke[] {
   return keys;
 }
 
+function adapt(input: string): string {
+  const small: Record<string, string> = {
+    zero: "0", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6", seven: "7", eight: "8", nine: "9",
+    ten: "10", eleven: "11", twelve: "12", thirteen: "13", fourteen: "14", fifteen: "15", sixteen: "16", seventeen: "17", eighteen: "18", nineteen: "19",
+    twenty: "20", thirty: "30", forty: "40", fifty: "50", sixty: "60", seventy: "70", eighty: "80", ninety: "90", hundred: "100",
+  };
+  let s = input.trim()
+    .replace(/[’']/g, "")
+    .replace(/[×✕⋅]/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/[–—−]/g, "-")
+    .replace(/²/g, "^2")
+    .replace(/³(?!√)/g, "^3")
+    .replace(/\bpi\b/gi, "π")
+    .replace(/(\d),(\d{3})(?!\d)/g, "$1$2");
+  s = s.replace(/^(?:please\s+)?(?:can you |could you |would you )?(?:please\s+)?(?:help me |show me |tell me |give me |i need(?: to)? |i want(?: to)? )?/i, "");
+  s = s.replace(/^(?:what(?: is|s)?|whats|calculate|compute|evaluate|figure out|work out)\s+/i, "");
+  s = s.replace(/^(?:solve|find|determine)\s+(?:for\s+x\s*)?(?::\s*)?/i, "");
+  s = s.replace(/\?+$/g, "").trim();
+  s = s.replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred)\b/gi, (word) => small[word.toLowerCase()] || word);
+  s = s.replace(/\btwo\s*[- ]?var\b/gi, "2-var");
+  s = s.replace(/(\d+(?:\.\d+)?)\s*[x*]\s*10\s*\^\s*\(?\s*(-?\d+)\s*\)?/gi, "$1ᴇ$2");
+  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:%|percent)\s+of\s+(\d+(?:\.\d+)?)/gi, "($1/100)*$2");
+  s = s.replace(/\bfactorial of\s+(\d+(?:\.\d+)?)/gi, "$1!");
+  s = s.replace(/(\d+(?:\.\d+)?)\s+factorial\b/gi, "$1!");
+  s = s.replace(/(\d+(?:\.\d+)?)\s*(?:choose|c)\s+(\d+(?:\.\d+)?)/gi, "nCr($1,$2)");
+  s = s.replace(/\bcombinations? of\s+(\d+(?:\.\d+)?)\s+(?:and\s+)?(\d+(?:\.\d+)?)/gi, "nCr($1,$2)");
+  s = s.replace(/(\d+(?:\.\d+)?)\s+(?:permute|permutation of)\s+(\d+(?:\.\d+)?)/gi, "nPr($1,$2)");
+  s = s.replace(/\bpermutations? of\s+(\d+(?:\.\d+)?)\s+(?:and\s+)?(\d+(?:\.\d+)?)/gi, "nPr($1,$2)");
+  s = s.replace(/\b(sin|cos|tan|log|ln)\s+of\s+/gi, "$1(");
+  s = s.replace(/\b(?:arc\s*sin|arcsin|asin|sine inverse|sin inverse)(?:\s+of)?\b/gi, "sin⁻¹(");
+  s = s.replace(/\b(?:arc\s*cos|arccos|acos|cosine inverse|cos inverse)(?:\s+of)?\b/gi, "cos⁻¹(");
+  s = s.replace(/\b(?:arc\s*tan|arctan|atan|tangent inverse|tan inverse)(?:\s+of)?\b/gi, "tan⁻¹(");
+  s = s.replace(/\b(?:cube|cubed) roots? of\b/gi, "³√(");
+  s = s.replace(/\bsquare roots? of\b/gi, "√(");
+  s = s.replace(/\bsqrt of\b/gi, "√(");
+  s = s.replace(/\babsolute value of\b/gi, "abs(");
+  s = s.replace(/\babs of\b/gi, "abs(");
+  s = s.replace(/\bnatural logs? of\b/gi, "ln(");
+  s = s.replace(/\bln of\b/gi, "ln(");
+  s = s.replace(/\blog(?:arithm)?s? of\b/gi, "log(");
+  s = s.replace(/\be to the(?: power(?: of)?)?\s+/gi, "e^(");
+  s = s.replace(/\b10 to the(?: power(?: of)?)?\s+/gi, "10^(");
+  s = s.replace(/\bto the power of\b/gi, "^");
+  s = s.replace(/\braised to\b/gi, "^");
+  s = s.replace(/\bto the\b/gi, "^");
+  s = s.replace(/(\d+(?:\.\d+)?)\s+over\s+(\d+(?:\.\d+)?)/gi, "($1)/($2)");
+  s = s.replace(/\bdivided by\b/gi, "/");
+  s = s.replace(/\bmultiplied by\b/gi, "*");
+  s = s.replace(/\btimes\b/gi, "*");
+  s = s.replace(/\bplus\b/gi, "+");
+  s = s.replace(/\bminus\b/gi, "-");
+  s = s.replace(/\bsquared\b/gi, "^2");
+  s = s.replace(/\bcubed\b/gi, "^3");
+  s = s.replace(/\bhalf of\b/gi, "(1/2)*");
+  s = s.replace(/\bdouble\b/gi, "2*");
+  s = s.replace(/\btriple\b/gi, "3*");
+  s = s.replace(/\b(?:is equal to|equals)\b/gi, "=");
+  s = s.replace(/\b(?:as a|to a|into a|in) fraction\b/gi, "►Frac");
+  if (/\b(?:average|mean|stats|data|numbers|scores|deviation|median)\b/i.test(s) || (s.match(/-?\d+(?:\.\d+)?/g) || []).length >= 3) {
+    s = s.replace(/(\d+(?:\.\d+)?)\s+and\s+(?=\d)/gi, "$1, ");
+  }
+  s = s.replace(/[;|]/g, ",");
+  let open = 0;
+  for (const ch of s) {
+    if (ch === "(") open++;
+    else if (ch === ")") open = Math.max(0, open - 1);
+  }
+  while (open-- > 0) s += ")";
+  return s.replace(/\s+/g, " ").trim();
+}
+
+function equationExpr(text: string): string | null {
+  let depth = 0;
+  let at = -1;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === "(") depth++;
+    else if (ch === ")") depth = Math.max(0, depth - 1);
+    else if (ch === "=" && depth === 0) {
+      if (at >= 0) return null;
+      at = i;
+    }
+  }
+  if (at < 0) return null;
+  const lhs = text.slice(0, at).trim();
+  const rhs = text.slice(at + 1).trim();
+  if (!lhs || !rhs || !/x/i.test(lhs + rhs)) return null;
+  if (/^(?:y|f\(x\))$/i.test(lhs.replace(/\s+/g, ""))) return null;
+  if (/^0$/.test(rhs.replace(/\s+/g, ""))) return lhs;
+  return `(${lhs})-(${rhs})`;
+}
+
 function exprKeys(raw: string): { keys: Stroke[]; source: string } | null {
   const prepared = raw.trim()
-    .replace(/\bsquare root of\s*/gi, "√(")
-    .replace(/\bsquared\b/gi, "^2")
-    .replace(/\bcubed\b/gi, "^3")
-    .replace(/\bplus\b/gi, "+")
-    .replace(/\bminus\b/gi, "-")
-    .replace(/\btimes\b/gi, "*")
-    .replace(/\bdivided by\b/gi, "/")
-    .replace(/\bto the\b/gi, "^")
     .replace(/x(\d)(?!\d)/gi, "x^$1")
-    .replace(/\b(sin|cos|tan|log|ln)\s+(?![(])/gi, "$1(");
+    .replace(/\b(sin⁻¹|cos⁻¹|tan⁻¹|sin|cos|tan|log|ln|abs|nCr|nPr)\s+(?![(])/gi, "$1(");
   const s = prepared.replace(/\s+/g, "").replace(/×/g, "*").replace(/÷/g, "/").replace(/–|—|−/g, "-").replace(/\*\*/g, "^").replace(/pi/gi, "π").replace(/sqrt\(/gi, "√(");
   if (!s) return null;
   const keys: Stroke[] = [];
@@ -76,6 +161,21 @@ function exprKeys(raw: string): { keys: Stroke[]; source: string } | null {
   while (i < s.length) {
     const rest = s.slice(i);
     const lower = rest.toLowerCase();
+    const take = (token: string, typed: Stroke[], written: string) => {
+      keys.push(...typed);
+      source += written;
+      i += token.length;
+    };
+    if (rest.startsWith("sin⁻¹(")) { take("sin⁻¹(", [stroke("2nd", "2nd"), stroke("sin", "sin")], "sin⁻¹("); continue; }
+    if (rest.startsWith("cos⁻¹(")) { take("cos⁻¹(", [stroke("2nd", "2nd"), stroke("cos", "cos")], "cos⁻¹("); continue; }
+    if (rest.startsWith("tan⁻¹(")) { take("tan⁻¹(", [stroke("2nd", "2nd"), stroke("tan", "tan")], "tan⁻¹("); continue; }
+    if (lower.startsWith("10^(")) { take("10^(", [stroke("2nd", "2nd"), stroke("log", "log")], "10^("); continue; }
+    if (lower.startsWith("e^(")) { take("e^(", [stroke("2nd", "2nd"), stroke("ln", "ln")], "e^("); continue; }
+    if (rest.startsWith("³√(")) { take("³√(", [stroke("math", "math"), stroke("n3", "3")], "³√("); continue; }
+    if (lower.startsWith("ncr(")) { take(rest.slice(0, 4), [stroke("math", "math"), stroke("right", "right"), stroke("right", "right"), stroke("n4", "4")], "nCr("); continue; }
+    if (lower.startsWith("npr(")) { take(rest.slice(0, 4), [stroke("math", "math"), stroke("right", "right"), stroke("right", "right"), stroke("n3", "3")], "nPr("); continue; }
+    if (lower.startsWith("abs(")) { take("abs(", [stroke("math", "math"), stroke("right", "right"), stroke("n1", "1")], "abs("); continue; }
+    if (rest.startsWith("►Frac")) { take("►Frac", [stroke("math", "math"), stroke("n1", "1")], "►Frac"); continue; }
     if (lower.startsWith("sin(")) { keys.push(stroke("sin", "sin")); source += "sin("; i += 4; continue; }
     if (lower.startsWith("cos(")) { keys.push(stroke("cos", "cos")); source += "cos("; i += 4; continue; }
     if (lower.startsWith("tan(")) { keys.push(stroke("tan", "tan")); source += "tan("; i += 4; continue; }
@@ -84,6 +184,10 @@ function exprKeys(raw: string): { keys: Stroke[]; source: string } | null {
     if (lower.startsWith("√(")) { keys.push(stroke("2nd", "2nd"), stroke("sq", "√")); source += "√("; i += 2; continue; }
     if (s[i] === "π") { keys.push(stroke("2nd", "2nd"), stroke("pow", "π")); source += "π"; i++; continue; }
     if (s[i] === "°") { keys.push(stroke("2nd", "2nd"), stroke("apps", "apps"), stroke("n1", "1")); source += "°"; i++; continue; }
+    if (s[i] === "!") { keys.push(stroke("math", "math"), stroke("right", "right"), stroke("right", "right"), stroke("n5", "5")); source += "!"; i++; continue; }
+    if (s[i] === "ᴇ") { keys.push(stroke("2nd", "2nd"), stroke("comma", "EE")); source += "ᴇ"; i++; continue; }
+    if (s[i] === "³") { keys.push(stroke("math", "math"), stroke("n2", "2")); source += "³"; i++; continue; }
+    if (lower.startsWith("e") && (s[i + 1] === undefined || "+-−×÷*/^)!,".includes(s[i + 1]) || s[i + 1] === "►")) { keys.push(stroke("2nd", "2nd"), stroke("div", "e")); source += "e"; i++; continue; }
     if (s[i] === "x" || s[i] === "X") { keys.push(stroke("xt", "X,T,θ,n")); source += "X"; i++; continue; }
     if (s[i] === "(") { keys.push(stroke("lparen", "(")); source += "("; i++; continue; }
     if (s[i] === ")") { keys.push(stroke("rparen", ")")); source += ")"; i++; continue; }
@@ -406,6 +510,45 @@ function regressionPlan(text: string, pairs: [number, number][]): Interpret {
   };
 }
 
+function poissonPlan(text: string, lambda: number, x: number, cdf: boolean): Interpret {
+  if (!(lambda > 0) || !(x >= 0)) return { error: "Poisson needs a mean above 0 and a count x." };
+  return {
+    title: cdf ? "poissoncdf" : "poissonpdf",
+    problem: text,
+    steps: [
+      wake(),
+      {
+        title: cdf ? "Paste poissoncdf(" : "Paste poissonpdf(",
+        why: cdf
+          ? "2nd, vars opens DISTR. poissoncdf( is letter D, the vars key. The arguments are the mean, then x."
+          : "2nd, vars opens DISTR. poissonpdf( is letter C, the prgm key. The arguments are the mean, then x.",
+        keys: [stroke("2nd", "2nd"), stroke("vars", "vars"), stroke(cdf ? "inv" : "prgm", cdf ? "inv" : "prgm"), ...numberKeys(lambda), stroke("comma", ","), ...numberKeys(x), stroke("rparen", ")"), stroke("enter", "enter")],
+      },
+      { title: "Read the probability", why: "The result is a probability between 0 and 1.", keys: [] },
+    ],
+  };
+}
+
+function twoVarPlan(text: string, pairs: [number, number][]): Interpret {
+  if (pairs.length < 2) return { error: "2-Var Stats needs at least two points, written like (1, 2) (2, 4)." };
+  const xs = pairs.map((pair) => pair[0]);
+  const ys = pairs.map((pair) => pair[1]);
+  const up = repeat("up", "up", xs.length);
+  return {
+    title: "Two-variable statistics",
+    problem: text,
+    steps: [
+      wake(),
+      { title: "Open the list editor", why: "stat, then 1:Edit. Paired data goes in L1 and L2.", keys: [stroke("stat", "stat"), stroke("n1", "1")] },
+      listEntry(xs, "L1"),
+      { title: "Move to the top of L2", why: "Up returns to the first row. Right moves into L2 on that same row.", keys: [...up, stroke("right", "right")] },
+      listEntry(ys, "L2"),
+      { title: "Choose 2-Var Stats", why: "2nd mode quits. stat, right arrow, opens CALC. 2-Var Stats is option 2.", keys: [stroke("2nd", "2nd"), stroke("mode", "mode"), stroke("stat", "stat"), stroke("right", "right"), stroke("n2", "2")] },
+      { title: "Move to Calculate", why: "Down twice passes the two list names. Enter runs it. x̄ and ȳ are the two means.", keys: [stroke("down", "down"), stroke("down", "down"), stroke("enter", "enter")] },
+    ],
+  };
+}
+
 function binomialPlan(text: string, n: number, p: number, x: number, cdf: boolean): Interpret {
   if (!(n >= 0) || !(p >= 0 && p <= 1) || !(x >= 0)) return { error: "Binomial needs n trials, probability p between 0 and 1, and x successes." };
   return {
@@ -593,7 +736,8 @@ function numbersIn(text: string) {
 export function interpret(input: string): Interpret {
   const original = input.trim().replace(/\s+/g, " ");
   if (!original) return { error: "Type a problem." };
-  const { text, hits } = hear(original);
+  const adapted = adapt(original);
+  const { text, hits } = hear(adapted);
   const has = (name: string) => hits.has(name);
   const mean = grab(text, /(?:mean|μ|mu|average)\s*(?:=|of|is)?\s*(-?\d+(?:\.\d+)?)/) ?? 0;
   const sd = grab(text, /(?:sd|std|sigma|deviation)\s*(?:=|of|is)?\s*(-?\d+(?:\.\d+)?)/) ?? 1;
@@ -613,13 +757,24 @@ export function interpret(input: string): Interpret {
     }
   }
 
+  if (/poisson/.test(text)) {
+    const nums = numbersIn(text);
+    const lambda = grab(text, /(?:lambda|λ|mean|mu|μ)\s*=?\s*(-?\d+(?:\.\d+)?)/) ?? nums[0] ?? null;
+    const count = grab(text, /\bx\s*=\s*(-?\d+(?:\.\d+)?)/) ?? nums.find((value) => value !== lambda) ?? null;
+    if (lambda !== null && count !== null) {
+      const cdf = /cdf|at most/.test(text);
+      return tag(poissonPlan(original, lambda, count, cdf), cdf ? `poissoncdf(${lambda}, ${count})` : `poissonpdf(${lambda}, ${count})`);
+    }
+  }
+
   if (has("inv") || /z-?score/.test(text)) {
     const percent = grab(text, /(\d+(?:\.\d+)?)\s*(?:st|nd|rd|th)?\s*percentile/) ?? grab(text, /percentile\s*(?:=|of|is)?\s*(\d+(?:\.\d+)?)/);
     const area = percent !== null && percent > 1 ? percent / 100 : percent !== null ? percent : grab(text, /(0?\.\d+)/);
     if (area !== null) return tag(invPlan(original, area, mean, sd), `invNorm(${area})`);
   }
 
-  const pairs = [...original.matchAll(/\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g)].map((match) => [Number(match[1]), Number(match[2])] as [number, number]);
+  const pairs = [...adapted.matchAll(/\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g)].map((match) => [Number(match[1]), Number(match[2])] as [number, number]);
+  if (pairs.length >= 2 && /2\s*[- ]?var|two variable/.test(text)) return tag(twoVarPlan(original, pairs), `2-Var Stats of ${pairs.length} points`);
   if (pairs.length >= 2 && (has("reg") || !has("zero") && !has("normal") && !has("min") && !has("max"))) {
     return tag(regressionPlan(original, pairs), `Line through ${pairs.length} points`);
   }
@@ -636,9 +791,23 @@ export function interpret(input: string): Interpret {
     if (right) return tag(normalPlan(original, Number(right[1]), null, mean, sd), `Area above ${right[1]}`);
   }
 
-  const trig = text.match(/(sin|cos|tan)\s*\(?\s*(-?\d+(?:\.\d+)?)/);
-  if (trig && !has("radian") && !/π/.test(original)) {
+  const trig = text.match(/\b(sin|cos|tan)\s*\(?\s*(-?\d+(?:\.\d+)?)/);
+  if (trig && !/⁻¹/.test(text) && !has("radian") && !/π/.test(adapted)) {
     return tag(degreePlan(original, trig[1] as "sin" | "cos" | "tan", Number(trig[2])), `${trig[1]} ${trig[2]} degrees`);
+  }
+
+  const yMatch = adapted.match(/^(?:y|f\s*\(\s*x\s*\))\s*=\s*(.+)$/i);
+  if (yMatch && !has("zero") && !has("min") && !has("max") && !has("vertex")) {
+    const body = yMatch[1];
+    if (has("table")) return tag(tablePlan(original, body), `Table of ${body}`);
+    if (has("graph") || !rootsOf(exprKeys(body)?.source || "").length) return tag(graphOnly(original, body), `Graph ${body}`);
+    return tag(zeroPlan(original, body), `Zero of ${body}`);
+  }
+
+  const solved = equationExpr(adapted);
+  if (solved && !has("graph") && !has("table") && !has("min") && !has("max") && !has("intersect")) {
+    const plan = zeroPlan(original, solved);
+    if (!("error" in plan)) return tag(plan, `Zero of ${solved}`);
   }
 
   const parts = chunksOf(text);
@@ -652,8 +821,8 @@ export function interpret(input: string): Interpret {
   if (has("graph") && parts[0]) return tag(graphOnly(original, parts[0]), `Graph ${parts[0]}`);
 
   const bareList = /^-?\d+(?:\.\d+)?(?:\s*(?:,|\s)\s*-?\d+(?:\.\d+)?)+$/.test(original.trim());
-  if ((has("stats") || bareList) && !/[+*/^]/.test(text) && !/x/i.test(text)) {
-    const values = numbersIn(original);
+  if ((has("stats") || bareList) && !/[+*/^]/.test(text) && !/x/i.test(adapted)) {
+    const values = numbersIn(adapted);
     if (values.length >= 2) return tag(statsPlan(original, values), `1-Var Stats of ${values.join(", ")}`);
   }
 
@@ -663,9 +832,41 @@ export function interpret(input: string): Interpret {
     return tag(graphOnly(original, parts[0]), `Graph ${parts[0]}`);
   }
 
-  const bare = original.replace(/^(?:calculate|compute|evaluate|what is|whats|what's)\s+/i, "").replace(/\?$/, "");
-  if (/[0-9xπ√(]/i.test(bare) && exprKeys(bare)) return tag(homePlan(original, bare), bare);
-  return { error: "Add the math too. A zero, a list of numbers, or an area all work, even with typos." };
+  const spokenList = adapted.replace(/^(?:data|numbers|values|scores|list)\s*(?:is|are|:)?\s*/i, "");
+  const listOk = /^-?\d+(?:\.\d+)?(?:\s*(?:,|\s)\s*-?\d+(?:\.\d+)?)+$/.test(spokenList.trim());
+  if ((has("stats") || listOk || bareList) && !/[+*/^]/.test(text) && !/x/i.test(spokenList)) {
+    const values = numbersIn(listOk ? spokenList : adapted);
+    if (values.length >= 2) return tag(statsPlan(original, values), `1-Var Stats of ${values.join(", ")}`);
+  }
+
+  const candidate = adapted.replace(/^(?:the|a|an)\s+/i, "");
+  const typed = exprKeys(candidate);
+  if (typed && !/x/i.test(typed.source)) {
+    const degree = /sin|cos|tan/.test(typed.source) && !/π/.test(typed.source) && !has("radian");
+    const env = emptyEnv();
+    if (degree) env.angle = "DEGREE";
+    try {
+      run(typed.source, env);
+      if (degree) {
+        return tag({
+          title: "Degree mode",
+          problem: original,
+          steps: [
+            wake(),
+            { title: "Open mode", why: "The status bar says RADIAN until you change it. A degree answer is wrong while that word is showing.", keys: [stroke("mode", "mode")] },
+            { title: "Select DEGREE", why: "Down twice reaches RADIAN and DEGREE. Right highlights DEGREE. Enter sets it.", keys: [stroke("down", "down"), stroke("down", "down"), stroke("right", "right"), stroke("enter", "enter")] },
+            { title: "Quit", why: "2nd mode is quit. The status bar should now say DEGREE.", keys: [stroke("2nd", "2nd"), stroke("mode", "mode")] },
+            { title: "Type it on the home screen", why: "The function key, or the math menu, types the operation. Close the parentheses, then enter.", keys: [...typed.keys, stroke("enter", "enter")] },
+            { title: "Read the result", why: "The answer is right-aligned under the expression.", keys: [] },
+          ],
+        }, candidate);
+      }
+      return tag(homePlan(original, candidate), candidate);
+    } catch {
+      /* fall through */
+    }
+  }
+  return { error: "Add the math too. An equation, a list, a root, or an area all work, in any wording." };
 }
 
 export function rehearsal(plan: Plan): Os {

@@ -4,15 +4,27 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalcWorkspace } from "@/components/CalcWorkspace";
 import { createOs, press, type KeyId, type Os } from "@/lib/calculator/os";
 import { interpret, screenNote, type Plan } from "@/lib/tutor/plan";
+import { markLessonComplete } from "@/lib/progress";
 import styles from "./follow.module.css";
 
 const EXAMPLES = [
   ["Zero", "Find the zero of x^2 - 5x + 6"],
-  ["Average", "average of 2, 4, 6, 8, 10"],
-  ["Area", "area between 1 and 2"],
+  ["Extrema", "maximum of -x^2 + 4x + 3"],
+  ["Intersection", "intersection of 2x + 1 and x^2 - 2"],
+  ["Normal Area", "area between z = 1 and z = 2"],
+  ["invNorm", "invNorm(0.95)"],
+  ["1-Var Stats", "1-Var Stats of 10, 20, 30, 40"],
+  ["LinReg", "LinReg for (1,2) (2,5) (3,7)"],
+  ["Trig Mode", "sin(30°)"],
 ] as const;
 
-export function FollowAlong({ initial = "" }: { initial?: string }) {
+export function FollowAlong({
+  initial = "",
+  lessonSlug,
+}: {
+  initial?: string;
+  lessonSlug?: string;
+}) {
   const [text, setText] = useState(initial);
   const [mode, setMode] = useState<"watch" | "press">("watch");
   const [plan, setPlan] = useState<Plan | null>(() => {
@@ -25,6 +37,7 @@ export function FollowAlong({ initial = "" }: { initial?: string }) {
   const [note, setNote] = useState("");
   const [playing, setPlaying] = useState(() => Boolean(initial) && !("error" in interpret(initial)));
   const [idle, setIdle] = useState<Os>(createOs);
+  const [showHint, setShowHint] = useState(false);
 
   const flat = useMemo(
     () => (plan ? plan.steps.flatMap((step, stepIndex) => step.keys.map((key) => ({ ...key, stepIndex }))) : []),
@@ -35,26 +48,35 @@ export function FollowAlong({ initial = "" }: { initial?: string }) {
   const step = plan?.steps[stepIndex];
   const next = !done ? flat[cursor] : undefined;
 
-  const advance = useCallback((id?: KeyId) => {
-    if (!next) return;
-    if (id && id !== next.id) {
-      setNote(`Press ${next.name}.`);
-      setPlaying(false);
-      return;
+  useEffect(() => {
+    if (done && lessonSlug) {
+      markLessonComplete(lessonSlug, true);
     }
-    setNote("");
-    setOs((current) => press(current, next.id));
-    const following = flat[cursor + 1];
-    if (!following) setPlaying(false);
-    else if (mode === "press" && following.stepIndex !== next.stepIndex) setPlaying(false);
-    setCursor((value) => value + 1);
-  }, [next, cursor, flat, mode]);
+  }, [done, lessonSlug]);
+
+  const advance = useCallback(
+    (id?: KeyId) => {
+      if (!next) return;
+      if (id && id !== next.id) {
+        setNote(`Incorrect key pressed. You need to press [ ${next.name} ]. Look for the glowing gold key!`);
+        setPlaying(false);
+        return;
+      }
+      setNote("");
+      setShowHint(false);
+      setOs((current) => press(current, next.id));
+      const following = flat[cursor + 1];
+      if (!following) setPlaying(false);
+      setCursor((value) => value + 1);
+    },
+    [next, cursor, flat],
+  );
 
   useEffect(() => {
     if (!playing || !next || mode !== "watch") return;
     const arrow = next.id === "left" || next.id === "right" || next.id === "up" || next.id === "down";
     const stepStart = cursor > 0 && flat[cursor - 1].stepIndex !== next.stepIndex;
-    const timer = window.setTimeout(() => advance(), (arrow ? 320 : 720) + (stepStart ? 1100 : 0));
+    const timer = window.setTimeout(() => advance(), (arrow ? 360 : 750) + (stepStart ? 1100 : 0));
     return () => window.clearTimeout(timer);
   }, [playing, next, advance, mode, cursor, flat]);
 
@@ -65,6 +87,7 @@ export function FollowAlong({ initial = "" }: { initial?: string }) {
     setCursor(0);
     setOs(createOs());
     setNote("");
+    setShowHint(false);
     if ("error" in nextPlan) {
       setPlan(null);
       setPlaying(false);
@@ -76,7 +99,10 @@ export function FollowAlong({ initial = "" }: { initial?: string }) {
   }
 
   function onPress(id: KeyId) {
-    if (mode === "watch") return;
+    if (mode === "watch") {
+      setNote("Switch to 'You Press' mode to interactively press the calculator keys yourself.");
+      return;
+    }
     if (!next) {
       setOs((current) => press(current, id));
       return;
@@ -88,47 +114,173 @@ export function FollowAlong({ initial = "" }: { initial?: string }) {
 
   return (
     <div className={styles.page}>
-      <form className={styles.ask} onSubmit={(event) => { event.preventDefault(); begin(text); }}>
-        <label htmlFor="problem">Type the problem. Spelling can be off.</label>
+      <form
+        className={`${styles.ask} glass-card`}
+        onSubmit={(event) => {
+          event.preventDefault();
+          begin(text);
+        }}
+      >
+        <label htmlFor="problem" className={styles.label}>
+          Type any TI-84 math problem or function name:
+        </label>
         <div className={styles.row}>
-          <input id="problem" value={text} onChange={(event) => setText(event.target.value)} placeholder="zero of x^2 - 5x + 6" autoComplete="off" />
-          <button type="submit">Go</button>
+          <input
+            id="problem"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="e.g. zero of x^2 - 5x + 6, invNorm(0.95), 1-Var Stats 10,20,30"
+            autoComplete="off"
+            className={styles.input}
+          />
+          <button type="submit" className="button button-primary">
+            Build Guided Lesson
+          </button>
         </div>
       </form>
+
       <div className={styles.examples}>
+        <span className={styles.exampleTitle}>Quick Examples:</span>
         {EXAMPLES.map(([label, example]) => (
-          <button type="button" key={label} onClick={() => begin(example)}>{label}</button>
+          <button
+            type="button"
+            key={label}
+            className={styles.examplePill}
+            onClick={() => begin(example)}
+          >
+            {label}
+          </button>
         ))}
       </div>
-      {note && !plan && <p className={styles.miss}>{note}</p>}
+
+      {note && !plan && <div className={styles.errorBanner}>{note}</div>}
 
       <div className={styles.work}>
-        <section className={styles.sheet}>
+        <section className={`${styles.sheet} glass-card`}>
           <div className={styles.modes} role="group" aria-label="How to follow">
-            <button type="button" className={mode === "watch" ? styles.on : ""} onClick={() => { setMode("watch"); if (plan && !done) setPlaying(true); }}>Watch</button>
-            <button type="button" className={mode === "press" ? styles.on : ""} onClick={() => { setMode("press"); setPlaying(false); }}>You press</button>
+            <button
+              type="button"
+              className={mode === "watch" ? styles.on : ""}
+              onClick={() => {
+                setMode("watch");
+                if (plan && !done) setPlaying(true);
+              }}
+            >
+              ▶ Watch Demonstration
+            </button>
+            <button
+              type="button"
+              className={mode === "press" ? styles.on : ""}
+              onClick={() => {
+                setMode("press");
+                setPlaying(false);
+              }}
+            >
+              🎯 You Press (Interactive)
+            </button>
           </div>
-          {!plan && <p>Watch plays every key slowly. You press means you press the one that glows.</p>}
+
+          {!plan && (
+            <div className={styles.emptyState}>
+              <h3>Select or type a math problem above</h3>
+              <p>
+                CalcTutor generates an interactive TI-84 keystroke sequence.
+                Choose <strong>Watch</strong> for an automated demo or <strong>You Press</strong> to operate the calculator keys step-by-step.
+              </p>
+            </div>
+          )}
+
           {plan && step && (
-            <>
-              <p className={styles.count}>{plan.readAs || plan.title}</p>
-              <h1>{done ? "Answer" : step.title}</h1>
-              <p>{done ? "Same keys as class. Watch again, or switch to You press and do it yourself." : step.why}</p>
-              {!done && next && <p className={styles.now}>{mode === "watch" ? "Watch" : "Press"} {next.name}</p>}
-              {note && <p className={styles.miss}>{note}</p>}
-              {done && result && <pre className={styles.result}>{result}</pre>}
-              <div className={styles.actions}>
-                {mode === "watch" && !done && <button type="button" className={styles.solid} onClick={() => setPlaying((value) => !value)}>{playing ? "Pause" : "Play"}</button>}
-                <button type="button" onClick={() => begin(plan.problem)}>Start over</button>
+            <div className={styles.stepContainer}>
+              <div className={styles.progressHeader}>
+                <span className={styles.count}>{plan.readAs || plan.title}</span>
+                <span className={styles.stepBadge}>
+                  Step {done ? plan.steps.length : stepIndex + 1} of {plan.steps.length}
+                </span>
               </div>
-            </>
+
+              {/* Progress bar */}
+              <div className={styles.progressBarTrack}>
+                <div
+                  className={styles.progressBarFill}
+                  style={{
+                    width: `${((done ? plan.steps.length : stepIndex + 1) / plan.steps.length) * 100}%`,
+                  }}
+                />
+              </div>
+
+              <h2 className={styles.stepTitle}>{done ? "🎉 Task Complete!" : step.title}</h2>
+              <p className={styles.stepWhy}>{done ? "You have successfully executed the full TI-84 sequence." : step.why}</p>
+
+              {!done && next && (
+                <div className={styles.nextKeyBox}>
+                  <span>Target Action:</span>
+                  <strong>{mode === "watch" ? "Watching" : "Press Key"}: [ {next.name} ]</strong>
+                </div>
+              )}
+
+              {note && <div className={styles.miss}>{note}</div>}
+
+              {done && result && (
+                <div className={styles.resultBox}>
+                  <div className={styles.resultTitle}>Final Calculator Output</div>
+                  <pre className={styles.resultContent}>{result}</pre>
+                </div>
+              )}
+
+              <div className={styles.actions}>
+                {mode === "watch" && !done && (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => setPlaying((value) => !value)}
+                  >
+                    {playing ? "Pause Simulation" : "Resume Playback"}
+                  </button>
+                )}
+                {!done && mode === "press" && (
+                  <button
+                    type="button"
+                    className="button button-quiet"
+                    onClick={() => setShowHint((prev) => !prev)}
+                  >
+                    {showHint ? "Hide Hint" : "Need a Hint?"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="button button-quiet"
+                  onClick={() => begin(plan.problem)}
+                >
+                  Restart Lesson
+                </button>
+              </div>
+
+              {showHint && next && (
+                <div className={styles.hintBox}>
+                  💡 <strong>Hint:</strong> Look for key <strong>[{next.name}]</strong> glowing gold on the calculator keypad. If it has a 2nd label above it, press the blue <strong>2nd</strong> key first!
+                </div>
+              )}
+            </div>
           )}
         </section>
-        {!plan ? (
-          <CalcWorkspace embed os={idle} onPress={(id) => setIdle((current) => press(current, id))} />
-        ) : (
-          <CalcWorkspace embed os={os} highlight={mode === "press" ? next?.id ?? null : next?.id ?? null} onPress={onPress} />
-        )}
+
+        <div className={styles.calcContainer}>
+          {!plan ? (
+            <CalcWorkspace
+              embed
+              os={idle}
+              onPress={(id) => setIdle((current) => press(current, id))}
+            />
+          ) : (
+            <CalcWorkspace
+              embed
+              os={os}
+              highlight={next?.id ?? null}
+              onPress={onPress}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
