@@ -15,7 +15,24 @@ export function getProgress(): ProgressState {
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const value: unknown = JSON.parse(raw);
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        const saved = value as Record<string, unknown>;
+        const lessons = (input: unknown): Record<string, boolean> =>
+          input && typeof input === "object" && !Array.isArray(input)
+            ? Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "boolean"))
+            : {};
+        return {
+          completedLessons: lessons(saved.completedLessons),
+          masteredLessons: lessons(saved.masteredLessons),
+          lastPracticed: typeof saved.lastPracticed === "string" && Number.isFinite(Date.parse(saved.lastPracticed))
+            ? saved.lastPracticed : null,
+          streakDays: typeof saved.streakDays === "number" && Number.isSafeInteger(saved.streakDays) && saved.streakDays >= 1
+            ? saved.streakDays : 1,
+        };
+      }
+    }
   } catch {
     /* fallback to default */
   }
