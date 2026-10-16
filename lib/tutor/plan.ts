@@ -114,7 +114,9 @@ function adapt(input: string): string {
   s = s.replace(/\btriple\b/gi, "3*");
   s = s.replace(/\b(?:is equal to|equals)\b/gi, "=");
   s = s.replace(/\b(?:as a|to a|into a|in) fraction\b/gi, "►Frac");
-  if (/\b(?:average|mean|stats|data|numbers|scores|deviation|median)\b/i.test(s) || (s.match(/-?\d+(?:\.\d+)?/g) || []).length >= 3) {
+  const numericList = /\b(?:average|mean|stats|data|numbers|scores|deviation|median)\b/i.test(s)
+    || (/\band\s+(?=-?\d)/i.test(s) && !/[a-z=+*/^]/i.test(s));
+  if (numericList) {
     s = s.replace(/(\d+(?:\.\d+)?)\s+and\s+(?=\d)/gi, "$1, ");
   }
   s = s.replace(/[;|]/g, ",");
@@ -619,6 +621,51 @@ function tablePlan(text: string, raw: string): Interpret {
   };
 }
 
+function solveEquationPlan(text: string, equation: string): Interpret {
+  const typed = exprKeys(equation);
+  if (!typed || !/x/i.test(typed.source)) return { error: "Give me an equation containing x, for example 2x + 3 = 11." };
+  return {
+    title: "Solve for x",
+    problem: text,
+    steps: [
+      wake(),
+      {
+        title: "Open the numeric solver",
+        why: "The TI-84 MATH menu includes solve(. Its first argument is the equation rearranged so one side is zero; X is the variable and 0 is a starting guess.",
+        keys: [stroke("math", "math"), stroke("n6", "6"), ...typed.keys, stroke("comma", ","), stroke("xt", "X"), stroke("comma", ","), ...numberKeys(0), stroke("rparen", ")"), stroke("enter", "enter")],
+      },
+      { title: "Read the solution", why: "The solver returns the X value that makes the equation true. If it reports ERR:NO SIGN CHNG, try a starting guess closer to another solution.", keys: [] },
+    ],
+  };
+}
+
+function calculusPlan(text: string, raw: string, kind: "derivative" | "integral", point?: number, lower?: number, upper?: number): Interpret {
+  const typed = exprKeys(raw);
+  if (!typed) return { error: `Write the expression in x, for example ${kind === "derivative" ? "derivative of x^2 at x=3" : "integral of 2x from 0 to 3"}.` };
+  if (kind === "derivative" && point === undefined) return { error: "I found the function. Add the x-value where you want its derivative, such as ‘at x = 3’." };
+  if (kind === "integral" && (lower === undefined || upper === undefined)) return { error: "I found the function. Add both bounds, such as ‘from 0 to 3’, for a definite integral." };
+  const integral = kind === "integral";
+  const keys: Stroke[] = [stroke("math", "math"), stroke(integral ? "n5" : "n4", integral ? "5" : "4"), ...typed.keys, stroke("comma", ","), stroke("xt", "X"), stroke("comma", ",")];
+  if (integral) keys.push(...numberKeys(lower!), stroke("comma", ","), ...numberKeys(upper!));
+  else keys.push(...numberKeys(point!));
+  keys.push(stroke("rparen", ")"), stroke("enter", "enter"));
+  return {
+    title: integral ? "Definite integral" : "Numerical derivative",
+    problem: text,
+    steps: [
+      wake(),
+      {
+        title: integral ? "Enter fnInt(" : "Enter nDeriv(",
+        why: integral
+          ? `MATH, then 5, inserts fnInt(. The arguments are expression, X, lower bound ${lower}, and upper bound ${upper}. The result is the signed area over that interval.`
+          : `MATH, then 4, inserts nDeriv(. The arguments are expression, X, and the evaluation point ${point}. This estimates the instantaneous slope there.`,
+        keys,
+      },
+      { title: integral ? "Read the signed area" : "Read the slope", why: integral ? "The result is the accumulated signed area between the two bounds." : "The result is the function's slope at the requested x-value.", keys: [] },
+    ],
+  };
+}
+
 function graphOnly(text: string, raw: string): Interpret {
   const typed = exprKeys(raw);
   if (!typed) return { error: "Type the equation too, like y = 2x + 1." };
@@ -650,6 +697,9 @@ const LEXICON: [string, string[]][] = [
   ["sin", ["sin", "sine"]],
   ["cos", ["cos", "cosine"]],
   ["tan", ["tan", "tangent"]],
+  ["solve", ["solve", "solution", "solutions", "rootfor"]],
+  ["derivative", ["derivative", "differentiate", "differentiation", "slope", "deriv"]],
+  ["integral", ["integral", "integrate", "integration", "antiderivative"]],
 ];
 
 const EXACT = new Map<string, string>();
@@ -668,7 +718,7 @@ function distance(a: string, b: string) {
   return rows[a.length][b.length];
 }
 
-const SKIP = new Set(["the", "and", "for", "you", "how", "are", "was", "not", "but", "can", "has", "had", "than", "then", "that", "this", "with", "from", "your", "have", "just", "like", "into", "over", "also", "only", "some", "them", "very", "when", "what", "will", "here", "more", "most", "much", "such", "each", "even", "well", "were", "been", "they", "does", "where", "find", "show", "type", "its", "its", "out", "all", "any", "our", "now", "one", "two"]);
+const SKIP = new Set(["the", "and", "for", "you", "how", "are", "was", "not", "but", "can", "has", "had", "than", "then", "that", "this", "with", "from", "your", "have", "just", "like", "into", "over", "also", "only", "some", "them", "very", "when", "what", "will", "here", "more", "most", "much", "such", "each", "even", "well", "were", "been", "they", "does", "where", "find", "show", "type", "its", "its", "out", "all", "any", "our", "now", "one", "two", "at", "of", "is", "a", "i", "please", "could", "would", "should", "calculate", "compute", "work", "me"]);
 
 function closest(word: string) {
   const known = EXACT.get(word);
@@ -718,7 +768,7 @@ function tag(plan: Interpret, readAs: string): Interpret {
 
 function chunksOf(text: string) {
   const stripped = text
-    .replace(/\b(zero|root|roots|minimum|maximum|min|max|lowest|highest|smallest|largest|vertex|vertices|turningpoint|intersect|intersection|graph|plot|table|find|the|of|for|a|an|what|is|whats|please|can|you|how|do|i|solve|equation|function|where|does|equal|equals|point|value)\b/gi, " ")
+    .replace(/\b(zero|root|roots|minimum|maximum|min|max|lowest|highest|smallest|largest|vertex|vertices|turningpoint|intersect|intersection|graph|plot|table|find|the|of|for|a|an|what|is|whats|please|can|you|how|do|i|solve|equation|function|where|does|equal|equals|point|value|derivative|differentiate|slope|integral|integrate|calculate|compute|work|out|at|when)\b/gi, " ")
     .replace(/y\s*=/gi, " ")
     .replace(/f\s*\(\s*x\s*\)\s*=/gi, " ")
     .replace(/=\s*0\b/g, " ");
@@ -747,6 +797,30 @@ export function interpret(input: string): Interpret {
   const has = (name: string) => hits.has(name);
   const mean = grab(text, /(?:mean|μ|mu|average)\s*(?:=|of|is)?\s*(-?\d+(?:\.\d+)?)/) ?? 0;
   const sd = grab(text, /(?:sd|std|sigma|deviation)\s*(?:=|of|is)?\s*(-?\d+(?:\.\d+)?)/) ?? 1;
+
+  // Resolve explicitly named calculus requests before generic equation/graph
+  // fallbacks. This avoids treating the evaluation point as a second equation.
+  const derivativeRequest = adapted.match(/\b(?:derivative|differentiate|differentiation|slope)\b(.*)$/i);
+  if (derivativeRequest) {
+    let tail = derivativeRequest[1].trim().replace(/\s+(?:please|thanks|thank you)\s*$/i, "").replace(/^(?:of|for)\s+/i, "");
+    const pointMatch = tail.match(/\s+(?:at|when|where)\s+(?:x\s*(?:=|is)?\s*)?(-?\d+(?:\.\d+)?)\s*$/i)
+      || tail.match(/[,;]\s*x\s*=\s*(-?\d+(?:\.\d+)?)\s*$/i);
+    const point = pointMatch ? Number(pointMatch[1]) : undefined;
+    if (pointMatch) tail = tail.slice(0, pointMatch.index).trim();
+    const functionText = tail.replace(/\s+(?:with respect to|respect to)\s+x\s*$/i, "").trim();
+    return tag(calculusPlan(original, functionText, "derivative", point), `Derivative of ${functionText}${point === undefined ? "" : ` at x = ${point}`}`);
+  }
+
+  const integralRequest = adapted.match(/\b(?:integral|integrate|integration|antiderivative)\b(.*)$/i);
+  if (integralRequest) {
+    let tail = integralRequest[1].trim().replace(/\s+(?:please|thanks|thank you)\s*$/i, "").replace(/^(?:of|for)\s+/i, "");
+    const bounds = tail.match(/\s+(?:from|between)\s+(-?\d+(?:\.\d+)?)\s+(?:to|and)\s+(-?\d+(?:\.\d+)?)\s*$/i);
+    const lower = bounds ? Number(bounds[1]) : undefined;
+    const upper = bounds ? Number(bounds[2]) : undefined;
+    if (bounds) tail = tail.slice(0, bounds.index).trim();
+    const functionText = tail.replace(/\s+(?:with respect to|respect to)\s+x\s*$/i, "").trim();
+    return tag(calculusPlan(original, functionText, "integral", undefined, lower, upper), `Integral of ${functionText}${bounds ? ` from ${lower} to ${upper}` : ""}`);
+  }
 
   if (has("binom") || /\bn\s*=/.test(text) && /\bp\s*=/.test(text)) {
     const n = grab(text, /\bn\s*=\s*(-?\d+(?:\.\d+)?)/) ?? grab(text, /(\d+(?:\.\d+)?)\s+trials/);
@@ -810,7 +884,9 @@ export function interpret(input: string): Interpret {
     return tag(zeroPlan(original, body), `Zero of ${body}`);
   }
 
-  const solved = equationExpr(adapted);
+  const solveSource = adapted.replace(/^.*?\b(?:solution|equation)\b(?:\s+(?:to|for|of))?\s*/i, "");
+  const solved = equationExpr(solveSource);
+  if (solved && (has("solve") || /\b(?:solve|solution|find\s+x)\b/i.test(original))) return tag(solveEquationPlan(original, solved), `Solve ${solveSource}`);
   if (solved && !has("graph") && !has("table") && !has("min") && !has("max") && !has("intersect")) {
     const plan = zeroPlan(original, solved);
     if (!("error" in plan)) return tag(plan, `Zero of ${solved}`);
