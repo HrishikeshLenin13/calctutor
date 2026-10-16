@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface Review {
   id: string;
@@ -11,65 +11,16 @@ interface Review {
   date: string;
 }
 
-const SEED_REVIEWS: Review[] = [
-  {
-    id: "1",
-    name: "Sarah Jenkins",
-    role: "AP Statistics Student",
-    rating: 5,
-    comment:
-      "CalcTutor saved my AP Stats grade! Learning normalcdf and invNorm on a real visual TI-84 keypad where the buttons glowed as I clicked made everything click in 10 minutes.",
-    date: "2 days ago",
-  },
-  {
-    id: "2",
-    name: "Marcus Vance",
-    role: "Algebra II Student",
-    rating: 5,
-    comment:
-      "The 'You Press' interactive mode is amazing. Instead of watching a boring 20-minute video tutorial, I actually pressed Y=, ZStandard, and CALC Zero myself.",
-    date: "1 week ago",
-  },
-  {
-    id: "3",
-    name: "Prof. David Miller",
-    role: "High School Math Teacher",
-    rating: 5,
-    comment:
-      "I recommend CalcTutor to all my students. The TI-84 Plus CE emulator is spot on, and the step-by-step key sequence generator accepts natural wording without getting confused.",
-    date: "2 weeks ago",
-  },
-  {
-    id: "4",
-    name: "Elena Rostova",
-    role: "Calculus AB Student",
-    rating: 5,
-    comment:
-      "Finding graph intersections and calculating definite integrals with fnInt used to confuse me during exams. CalcTutor made the keypresses muscle memory!",
-    date: "3 weeks ago",
-  },
-];
 
-const STORAGE_KEY = "calcTutor.userReviews";
 
 export default function ReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>(SEED_REVIEWS);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [name, setName] = useState("");
   const [role, setRole] = useState("Math Student");
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        setReviews([...JSON.parse(saved), ...SEED_REVIEWS]);
-      }
-    } catch {
-      /* fallback to seed */
-    }
-  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +38,7 @@ export default function ReviewsPage() {
     const updated = [newReview, ...reviews];
     setReviews(updated);
 
-    try {
-      const userOnly = updated.filter((r) => !SEED_REVIEWS.some((s) => s.id === r.id));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userOnly));
-    } catch {
-      /* ignore */
-    }
+
 
     setName("");
     setComment("");
@@ -103,10 +49,10 @@ export default function ReviewsPage() {
   return (
     <main className="wrap page-shell">
       <div className="page-header">
-        <span className="pill-badge">Community Feedback</span>
-        <h1>Loved by Students & Educators</h1>
+        <span className="pill-badge">Community feedback</span>
+        <h1>No public reviews yet</h1>
         <p className="page-lede">
-          See how CalcTutor is helping thousands of students master their TI-84 Plus CE for algebra, calculus, AP statistics, and standardized test prep.
+          There are no published student reviews on CalcTutor. You can leave a note below; it will appear only in this browser session.
         </p>
       </div>
 
@@ -129,7 +75,7 @@ export default function ReviewsPage() {
                   </span>
                 ))}
               </div>
-              <p className="review-comment">"{r.comment}"</p>
+              <p className="review-comment">“{r.comment}”</p>
             </div>
           ))}
         </div>
@@ -137,11 +83,11 @@ export default function ReviewsPage() {
         {/* Submit Review Form */}
         <div className="submit-review-card glass-card">
           <h2>Share Your Experience</h2>
-          <p>Did CalcTutor help you master your TI-84? Leave a review for fellow students!</p>
+          <p>Your note is a local preview, not a public submission.</p>
 
           {submitted && (
             <div className="success-banner">
-              ✨ Thank you! Your review has been added.
+              Your note is now shown in this browser session.
             </div>
           )}
 
@@ -189,13 +135,13 @@ export default function ReviewsPage() {
                 rows={4}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="How did CalcTutor help you learn button sequences or solve class problems?"
+                placeholder="What was useful, confusing, or missing?"
                 required
               />
             </div>
 
             <button type="submit" className="button button-primary width-full">
-              Post Review
+              Add local note
             </button>
           </form>
         </div>

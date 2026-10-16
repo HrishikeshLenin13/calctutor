@@ -43,6 +43,10 @@ next-env.d.ts
 # local knowledge graph
 /graphify-out
 
+# Local browser screenshots and Playwright MCP traces
+/artifacts/
+/.playwright-mcp/
+
 # agent instruction files, kept off the public repo
 /AGENTS.md
 /CLAUDE.md
