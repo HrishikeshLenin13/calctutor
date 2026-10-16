@@ -1,5 +1,5 @@
-import { evalGraph, emptyEnv, formatTi, run } from "../calculator/engine";
-import { createOs, press, type KeyId, type Os } from "../calculator/os";
+import { evalGraph, emptyEnv, formatTi, run } from "../calculator/engine.ts";
+import { createOs, press, type KeyId, type Os } from "../calculator/os.ts";
 
 export interface Stroke {
   id: KeyId;
@@ -69,6 +69,8 @@ function adapt(input: string): string {
     .replace(/\bpi\b/gi, "π")
     .replace(/(\d),(\d{3})(?!\d)/g, "$1$2");
   s = s.replace(/^(?:please\s+)?(?:can you |could you |would you )?(?:please\s+)?(?:help me |show me |tell me |give me |i need(?: to)? |i want(?: to)? )?/i, "");
+  s = s.replace(/^(?:hey[, ]+)?(?:i(?:'d| would) like to |i(?:'m| am) trying to |could you(?: please)? |would you(?: please)? |can you(?: please)? |please )/i, "");
+  s = s.replace(/^(?:work out|figure out|calculate|compute|evaluate|solve|find|show|tell me|help me)\s+(?:for me\s+)?/i, "");
   s = s.replace(/^(?:what(?: is|s)?|whats|calculate|compute|evaluate|figure out|work out)\s+/i, "");
   s = s.replace(/^(?:solve|find|determine)\s+(?:for\s+x\s*)?(?::\s*)?/i, "");
   s = s.replace(/\?+$/g, "").trim();
@@ -632,9 +634,9 @@ function graphOnly(text: string, raw: string): Interpret {
 
 const LEXICON: [string, string[]][] = [
   ["zero", ["zero", "zeros", "root", "roots", "xintercept", "xintercepts"]],
-  ["min", ["minimum", "minima", "min"]],
-  ["max", ["maximum", "maxima", "max"]],
-  ["vertex", ["vertex", "vertices"]],
+  ["min", ["minimum", "minima", "min", "lowest", "smallest"]],
+  ["max", ["maximum", "maxima", "max", "highest", "largest"]],
+  ["vertex", ["vertex", "vertices", "turningpoint", "turningpoints"]],
   ["intersect", ["intersect", "intersection", "intersects", "crossing", "cross"]],
   ["stats", ["average", "mean", "median", "stdev", "deviation", "statistics", "stats", "avg", "std"]],
   ["reg", ["regression", "linreg", "bestfit", "trendline", "trend"]],
@@ -690,6 +692,10 @@ function hear(input: string) {
   const text = input.toLowerCase()
     .replace(/[’']/g, "")
     .replace(/\bsquare\s+roots?\b/g, " sqrt ")
+    .replace(/\b(?:cross(?:es|ing)?|hit|hits|meet|meets)\s+(?:the\s+)?x[ -]?axis\b/g, " root ")
+    .replace(/\bturning\s+points?\b/g, "turningpoint")
+    .replace(/\b(?:highest|greatest|top)\s+(?:point|value|y[ -]?value)\b/g, "maximum")
+    .replace(/\b(?:lowest|smallest|bottom)\s+(?:point|value|y[ -]?value)\b/g, "minimum")
     .replace(/\bthen\b/g, "than")
     .replace(/\bx-intercepts?\b/g, " xintercept ")
     .replace(/\b(sin|cos|tan)(\d)/g, "$1 $2")
@@ -712,7 +718,7 @@ function tag(plan: Interpret, readAs: string): Interpret {
 
 function chunksOf(text: string) {
   const stripped = text
-    .replace(/\b(zero|root|roots|minimum|maximum|min|max|vertex|intersect|intersection|graph|plot|table|find|the|of|for|a|an|what|is|whats|please|can|you|how|do|i|solve|equation|function|where|does|equal|equals)\b/gi, " ")
+    .replace(/\b(zero|root|roots|minimum|maximum|min|max|lowest|highest|smallest|largest|vertex|vertices|turningpoint|intersect|intersection|graph|plot|table|find|the|of|for|a|an|what|is|whats|please|can|you|how|do|i|solve|equation|function|where|does|equal|equals|point|value)\b/gi, " ")
     .replace(/y\s*=/gi, " ")
     .replace(/f\s*\(\s*x\s*\)\s*=/gi, " ")
     .replace(/=\s*0\b/g, " ");
@@ -866,7 +872,7 @@ export function interpret(input: string): Interpret {
       /* fall through */
     }
   }
-  return { error: "Add the math too. An equation, a list, a root, or an area all work, in any wording." };
+  return { error: "I need a little more math to build the steps. Add an equation or values, then ask for a root, graph, turning point, probability, or statistics." };
 }
 
 export function rehearsal(plan: Plan): Os {

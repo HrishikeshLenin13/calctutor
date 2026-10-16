@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalculatorModel } from "@/components/CalculatorModel";
+import { PromptStarter } from "@/components/PromptStarter";
 import styles from "./home.module.css";
 
 const lessons = [
@@ -32,8 +33,10 @@ export default function Home() {
           </div>
           <p className={styles.deviceNote}>Try a key. The display responds to the same calculator state used in lessons.</p>
         </div>
-        <a className={styles.scrollCue} href="#how-it-works"><span />See how practice works</a>
+        <a className={styles.scrollCue} href="#prompt-title"><span />Ask a question</a>
       </section>
+
+      <PromptStarter />
 
       <section id="how-it-works" className={styles.method} aria-labelledby="method-title">
         <header className={styles.sectionHeading}>

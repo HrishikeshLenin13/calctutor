@@ -12,7 +12,7 @@ import {
   readValue,
   run,
   solveTvm,
-} from "./engine";
+} from "./engine.ts";
 
 export type KeyId =
   | "y=" | "window" | "zoom" | "trace" | "graph"

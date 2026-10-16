@@ -122,7 +122,7 @@ export function FollowAlong({
         }}
       >
         <label htmlFor="problem" className={styles.label}>
-          Type any TI-84 math problem or function name:
+          Describe a TI-84 math problem or enter a function:
         </label>
         <div className={styles.row}>
           <input
