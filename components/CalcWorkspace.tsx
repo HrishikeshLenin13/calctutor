@@ -461,5 +461,5 @@ function Battery() {
 }
 
 function Mark() {
-  return <svg width="13" height="13" viewBox="0 0 13 13" aria-hidden="true"><path d="M6.5 0.8 L7.7 4.8 L11.8 6 L7.7 7.2 L6.5 11.2 L5.3 7.2 L1.2 6 L5.3 4.8 Z" fill="#d5d5d5" /></svg>;
+  return <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7.2" fill="none" stroke="#d5d5d5" strokeWidth="1.1" /><text x="8" y="10.5" fill="#f0f0ee" fontFamily="Arial, sans-serif" fontSize="6.5" fontWeight="700" fontStyle="italic" textAnchor="middle">TI</text></svg>;
 }
