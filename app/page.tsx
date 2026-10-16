@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalcWorkspace } from "@/components/CalcWorkspace";
+import { CalculatorModel } from "@/components/CalculatorModel";
 import styles from "./home.module.css";
 
 const lessons = [
@@ -28,7 +28,7 @@ export default function Home() {
           <div className={styles.deviceMeta}><span>Interactive study calculator</span><span>TI-84 Plus CE</span></div>
           <div className={styles.deviceStage}>
             <div className={styles.deviceShadow} aria-hidden="true" />
-            <div className={styles.deviceFrame}><CalcWorkspace embed /></div>
+          <div className={styles.deviceFrame}><CalculatorModel /></div>
           </div>
           <p className={styles.deviceNote}>Try a key. The display responds to the same calculator state used in lessons.</p>
         </div>
