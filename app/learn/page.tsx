@@ -8,7 +8,7 @@ export default function LearnPage() {
         <span className="pill-badge">Interactive Curriculum</span>
         <h1>TI-84 Plus CE Masterclasses</h1>
         <p className="page-lede">
-          Don't just memorize key sequences. Learn the exact buttons, sub-menus, window settings, and mathematical logic required for Algebra, AP Statistics, Calculus, and SAT test prep.
+          Don&apos;t just memorize key sequences. Learn the exact buttons, sub-menus, window settings, and mathematical logic required for Algebra, AP Statistics, Calculus, and SAT test prep.
         </p>
       </div>
 

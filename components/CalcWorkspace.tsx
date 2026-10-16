@@ -47,7 +47,7 @@ export function CalcWorkspace({
         if (saved) setLocal(hydrate(JSON.parse(saved)));
       } catch { /* keep the cleared startup screen */ }
       setReady(true);
-      deviceRef.current?.focus();
+      deviceRef.current?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(frame);
   }, [standalone]);

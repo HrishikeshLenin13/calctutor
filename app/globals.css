@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #040914;
-  --surface: #0a1124;
-  --surface-card: rgba(15, 23, 42, 0.7);
-  --border: rgba(255, 255, 255, 0.08);
-  --border-glow: rgba(84, 164, 207, 0.25);
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --cyan: #54a4cf;
-  --cyan-glow: rgba(84, 164, 207, 0.35);
-  --amber: #ff7a59;
-  --font-sans: var(--font-geist-sans), -apple-system, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --canvas: #f7f6f2;
+  --surface: #ffffff;
+  --surface-card: #ffffff;
+  --border: #d9dcda;
+  --border-glow: #3158d8;
+  --text-main: #202424;
+  --text-muted: #707774;
+  --cyan: #3158d8;
+  --cyan-glow: rgba(49, 88, 216, 0.14);
+  --amber: #9c7927;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 * {
@@ -26,7 +26,7 @@ html {
 
 body {
   margin: 0;
-  background: radial-gradient(circle at 50% -10%, #0d1b3e 0%, var(--canvas) 70%);
+  background: var(--canvas);
   color: var(--text-main);
   font-family: var(--font-sans);
   min-height: 100vh;
@@ -683,4 +683,56 @@ a {
       text-align: center;
     }
   }
+}
+
+/* CalcTutor's new porcelain-and-graphite product shell. */
+.nav-shell {
+  height: 68px;
+  background: rgba(247, 246, 242, 0.96);
+  border-bottom-color: #d9dcda;
+  backdrop-filter: blur(12px);
+}
+.nav { width: min(1360px, calc(100% - 48px)); gap: 28px; }
+.brand { color: #202424; font-weight: 700; letter-spacing: -.04em; }
+.brand-dot { color: #3158d8; filter: none; }
+.beta-pill { color: #3158d8; background: #e8ecfc; border: 1px solid #cdd6fa; border-radius: 2px; }
+.nav-links { color: #626865; font-weight: 500; }
+.nav-links a:hover, .nav-links a.active { color: #202424; }
+.nav-links a.active::after { height: 1px; background: #3158d8; box-shadow: none; border-radius: 0; }
+.nav-cta { color: #fff; background: #202424; border-radius: 2px; box-shadow: none; }
+.nav-cta:hover { transform: none; background: #3158d8; box-shadow: none; }
+.mobile-menu { color: #202424; }
+.site-footer { color: #202424; background: #efeee9; border-top-color: #d9dcda; }
+.site-footer .brand { color: #202424; }
+.site-footer .footer-inner p { color: #707774; }
+.glass-card { color: #202424; background: #fff; border-color: #d9dcda; backdrop-filter: none; box-shadow: 0 8px 24px rgba(32, 36, 36, .06); }
+.card-3d:hover { border-color: #aab8ee; box-shadow: 0 12px 30px rgba(32, 36, 36, .1); }
+.button-primary { background: #202424; color: #fff; border-radius: 2px; box-shadow: none; }
+.button-primary:hover { background: #3158d8; box-shadow: none; }
+.button-quiet { color: #202424; background: transparent; border-color: #c4c8c3; border-radius: 2px; }
+.button-quiet:hover { background: #fff; border-color: #202424; }
+.page-lede, .category-desc, .lesson-desc, .time-est, .review-role, .review-date { color: #707774; }
+.page-header h1, .lesson-header h1 { color: #202424; }
+.lesson-breadcrumb .active, .lesson-breadcrumb a:hover { color: #202424; }
+.lesson-card-item { background: #fff; border-color: #d9dcda; border-radius: 2px; }
+.lesson-card-item:hover { background: #f0f2fa; border-color: #aab8ee; }
+.lesson-title { color: #202424; }
+.skill-tag { color: #515754; background: #f0f1ee; border-radius: 2px; }
+.category-badge { color: #3158d8; background: #edf0fd; border-color: #d4dcfb; border-radius: 2px; }
+.submit-review-card input, .submit-review-card select, .submit-review-card textarea { color: #202424; background: #fff; }
+.review-comment { color: #515754; }
+
+@media (max-width: 760px) {
+  .nav { width: calc(100% - 36px); gap: 12px; }
+  .nav-links { display: none; }
+  .nav-cta { margin-left: auto; padding: 9px 12px; }
+  .mobile-menu { display: inline-flex; width: 38px; height: 38px; align-items: center; justify-content: center; }
+  body.menu-open .nav-links { position: absolute; display: flex; flex-direction: column; gap: 0; top: 67px; left: 0; right: 0; margin: 0; padding: 8px 20px 18px; background: #f7f6f2; border-bottom: 1px solid #d9dcda; }
+  body.menu-open .nav-links a { padding: 13px 0; }
+  body.menu-open .nav-links a.active::after { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .card-3d, .nav-cta, .button, .lesson-card-item { transition: none; }
 }

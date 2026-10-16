@@ -6,55 +6,55 @@ import { useEffect, useState } from "react";
 
 export function SiteNav() {
   const path = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const menuOpen = openPath === path;
 
-  // Close mobile menu on route change
+  // Route changes can also come from browser history, so always clear the page lock.
   useEffect(() => {
-    setMenuOpen(false);
     document.body.classList.remove("menu-open");
   }, [path]);
 
+  function closeMenu() {
+    setOpenPath(null);
+    document.body.classList.remove("menu-open");
+  }
+
   const toggleMenu = () => {
-    setMenuOpen((prev) => {
-      const next = !prev;
-      if (next) {
-        document.body.classList.add("menu-open");
-      } else {
-        document.body.classList.remove("menu-open");
-      }
-      return next;
-    });
+    const next = !menuOpen;
+    setOpenPath(next ? path : null);
+    document.body.classList.toggle("menu-open", next);
   };
 
   return (
     <header className="nav-shell">
       <nav className="nav">
-        <Link href="/" className="brand">
+        <Link href="/" className="brand" onClick={closeMenu}>
           <span className="brand-dot">●</span>
           <span>CalcTutor</span>
           <span className="beta-pill">TI-84 CE</span>
         </Link>
-        <div className="nav-links">
-          <Link className={path === "/" ? "active" : ""} href="/">
+        <div className="nav-links" id="primary-navigation">
+          <Link className={path === "/" ? "active" : ""} href="/" onClick={closeMenu}>
             Home
           </Link>
-          <Link className={path.startsWith("/learn") ? "active" : ""} href="/learn">
+          <Link className={path.startsWith("/learn") ? "active" : ""} href="/learn" onClick={closeMenu}>
             Learn & Courses
           </Link>
-          <Link className={path === "/calculator" ? "active" : ""} href="/calculator">
+          <Link className={path === "/calculator" ? "active" : ""} href="/calculator" onClick={closeMenu}>
             Calculator Mode
           </Link>
-          <Link className={path === "/reviews" ? "active" : ""} href="/reviews">
+          <Link className={path === "/reviews" ? "active" : ""} href="/reviews" onClick={closeMenu}>
             Reviews
           </Link>
         </div>
-        <Link href="/learn" className="nav-cta">
+        <Link href="/learn" className="nav-cta" onClick={closeMenu}>
           Start Tutor <span>→</span>
         </Link>
         <button
           className="mobile-menu"
           aria-label="Toggle navigation menu"
           aria-expanded={menuOpen}
+          aria-controls="primary-navigation"
           onClick={toggleMenu}
         >
           {menuOpen ? "✕" : "☰"}
