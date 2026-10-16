@@ -108,7 +108,7 @@ function Calculator({ os, onPress, rotation }: SceneProps) {
   return (
     <group rotation={[rotation[0], rotation[1], 0.015]} scale={0.96}>
       <mesh geometry={BODY_GEOMETRY} position={[0, 0, -0.12]} castShadow receiveShadow>
-        <meshStandardMaterial color="#aeb2ae" metalness={0.55} roughness={0.34} />
+        <meshPhysicalMaterial color="#aeb2ae" metalness={0.28} roughness={0.31} clearcoat={0.24} clearcoatRoughness={0.34} />
       </mesh>
       <mesh geometry={FACE_GEOMETRY} position={[0, 0, 0.18]} castShadow receiveShadow>
         <meshStandardMaterial color="#171a1b" metalness={0.2} roughness={0.42} />
@@ -119,6 +119,14 @@ function Calculator({ os, onPress, rotation }: SceneProps) {
       <mesh position={[0, 3.16, 0.378]}>
         <planeGeometry args={[3.6, 2.68]} />
         <meshBasicMaterial map={screenTexture} toneMapped={false} />
+      </mesh>
+      <mesh position={[0, 3.16, 0.386]}>
+        <planeGeometry args={[3.6, 2.68]} />
+        <meshPhysicalMaterial color="#e7f0df" roughness={0.12} metalness={0.02} clearcoat={1} clearcoatRoughness={0.08} transparent opacity={0.1} depthWrite={false} />
+      </mesh>
+      <mesh position={[0, 4.56, 0.28]}>
+        <boxGeometry args={[4.38, 0.018, 0.018]} />
+        <meshStandardMaterial color="#d1d4cf" metalness={0.34} roughness={0.42} />
       </mesh>
       <BrandPlate />
       <Screws />
@@ -223,7 +231,7 @@ function useScreenTexture(os: Os) {
     const canvas = texture.image as HTMLCanvasElement;
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.fillStyle = "#fafbf8"; context.fillRect(0, 0, 1024, 768);
+    context.fillStyle = "#f3f5e7"; context.fillRect(0, 0, 1024, 768);
     context.fillStyle = "#171a1a"; context.fillRect(0, 0, 1024, 44);
     context.fillStyle = "#151817"; context.font = "700 22px ui-monospace, Menlo, monospace";
     context.textBaseline = "middle"; context.textAlign = "left";
