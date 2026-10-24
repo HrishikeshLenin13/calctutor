@@ -23,9 +23,14 @@ export function getProgress(): ProgressState {
           input && typeof input === "object" && !Array.isArray(input)
             ? Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "boolean"))
             : {};
+        const completedLessons = lessons(saved.completedLessons);
+        const masteredLessons = lessons(saved.masteredLessons);
+        for (const [slug, mastered] of Object.entries(masteredLessons)) {
+          if (mastered) completedLessons[slug] = true;
+        }
         return {
-          completedLessons: lessons(saved.completedLessons),
-          masteredLessons: lessons(saved.masteredLessons),
+          completedLessons,
+          masteredLessons,
           lastPracticed: typeof saved.lastPracticed === "string" && Number.isFinite(Date.parse(saved.lastPracticed))
             ? saved.lastPracticed : null,
           streakDays: typeof saved.streakDays === "number" && Number.isSafeInteger(saved.streakDays) && saved.streakDays >= 1

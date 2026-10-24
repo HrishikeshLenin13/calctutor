@@ -24,3 +24,12 @@ test('valid progress survives normalization and storage failures', () => {
   delete globalThis.window;
   assert.deepEqual(getProgress().completedLessons, {});
 });
+
+
+test('saved mastery always restores lesson completion', () => {
+  globalThis.window = {};
+  globalThis.localStorage = { getItem: () => JSON.stringify({completedLessons:{a:false}, masteredLessons:{a:true,b:true,c:false}}), setItem() {} };
+  assert.deepEqual(getProgress().completedLessons, {a:true,b:true});
+  assert.deepEqual(getProgress().masteredLessons, {a:true,b:true,c:false});
+  delete globalThis.window;
+});
