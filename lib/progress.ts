@@ -39,15 +39,26 @@ export function getProgress(): ProgressState {
   return { completedLessons: {}, masteredLessons: {}, lastPracticed: null, streakDays: 1 };
 }
 
+/** Consecutive local calendar days, not rolling 24-hour windows. */
+export function practiceStreak(previous: ProgressState, now = new Date()): number {
+  if (!previous.lastPracticed) return 1;
+  const day = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const gap = (day(now) - day(new Date(previous.lastPracticed))) / 86_400_000;
+  if (gap === 0) return previous.streakDays;
+  return gap === 1 ? previous.streakDays + 1 : 1;
+}
+
 export function markLessonComplete(slug: string, mastered = false): ProgressState {
   const current = getProgress();
+  const now = new Date();
   const next: ProgressState = {
     ...current,
+    streakDays: practiceStreak(current, now),
     completedLessons: { ...current.completedLessons, [slug]: true },
     masteredLessons: mastered
       ? { ...current.masteredLessons, [slug]: true }
       : current.masteredLessons,
-    lastPracticed: new Date().toISOString(),
+    lastPracticed: now.toISOString(),
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
