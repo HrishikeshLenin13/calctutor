@@ -97,3 +97,9 @@ export function parseProgressBackup(source: string): ProgressState {
   }
   return normalizeProgress(value.progress);
 }
+
+/** Returns success only when this application's browser storage key was removed. */
+export function resetProgress(): boolean {
+  if (typeof window === "undefined") return false;
+  try { localStorage.removeItem(STORAGE_KEY); return true; } catch { return false; }
+}
