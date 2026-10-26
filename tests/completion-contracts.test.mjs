@@ -157,3 +157,7 @@ const p=api.normalizeProgress({completedLessons:{a:true}}),source=api.serializeP
 test("import-preview-preserves-local-state-on-failure", () => {
 const p=api.normalizeProgress({completedLessons:{a:true}}),before=JSON.stringify(p);assert.throws(()=>api.previewProgressImport(p,'{}'));assert.equal(JSON.stringify(p),before);
 });
+
+test("same-local-day-does-not-grow-a-streak", () => {
+const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1,8).toISOString(),streakDays:4});assert.equal(api.practiceStreak(p,new Date(2026,0,1,20)),4);
+});
