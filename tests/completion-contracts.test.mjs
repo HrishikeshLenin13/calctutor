@@ -141,3 +141,7 @@ const a=api.normalizeProgress({lastPracticed:'2026-02-01',streakDays:2}),b=api.n
 test("merge-output-does-not-alias-either-input", () => {
 const a=api.normalizeProgress({completedLessons:{a:true}}),b=api.normalizeProgress({completedLessons:{b:true}}),r=api.mergeProgress(a,b);r.completedLessons.a=false;r.completedLessons.b=false;assert.equal(a.completedLessons.a,true);assert.equal(b.completedLessons.b,true);
 });
+
+test("lesson-removal-clears-mastery-and-completion-together", () => {
+const p=api.normalizeProgress({masteredLessons:{a:true,b:true}}),r=api.withoutLessonProgress(p,'a');assert.equal(r.masteredLessons.a,undefined);assert.equal(r.completedLessons.a,undefined);assert.equal(p.masteredLessons.a,true);
+});
