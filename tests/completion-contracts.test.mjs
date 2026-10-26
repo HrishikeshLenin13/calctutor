@@ -13,3 +13,7 @@ assert.deepEqual(api.normalizeProgress([]),api.normalizeProgress(null));
 test("nonobject-scalar-progress-is-not-a-record", () => {
 assert.deepEqual(api.normalizeProgress(3),api.normalizeProgress(null));
 });
+
+test("nonobject-text-progress-is-not-a-record", () => {
+assert.deepEqual(api.normalizeProgress('bad'),api.normalizeProgress(null));
+});
