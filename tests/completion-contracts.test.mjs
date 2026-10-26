@@ -57,3 +57,7 @@ const raw={completedLessons:{a:true}},r=api.normalizeProgress(raw);r.completedLe
 test("normalization-is-idempotent-for-valid-progress", () => {
 const r=api.normalizeProgress({masteredLessons:{a:true},streakDays:4});assert.deepEqual(api.normalizeProgress(r),r);
 });
+
+test("streak-normalizes-negative-values", () => {
+assert.equal(api.normalizeProgress({streakDays:-1}).streakDays,1);
+});
