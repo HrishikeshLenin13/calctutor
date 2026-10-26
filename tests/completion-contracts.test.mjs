@@ -77,3 +77,7 @@ assert.equal(api.normalizeProgress({streakDays:Number.MAX_SAFE_INTEGER+1}).strea
 test("invalid-practice-dates-are-not-preserved", () => {
 for(const lastPracticed of ['bad','',123])assert.equal(api.normalizeProgress({lastPracticed}).lastPracticed,null);
 });
+
+test("valid-practice-time-survives-backup-normalization", () => {
+const r=api.normalizeProgress({lastPracticed:'2026-01-01T12:00:00Z'});assert.equal(api.parseProgressBackup(api.serializeProgressBackup(r)).lastPracticed,r.lastPracticed);
+});
