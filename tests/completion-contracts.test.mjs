@@ -117,3 +117,7 @@ assert.throws(()=>api.parseProgressBackup("{\"format\":\"other\",\"version\":1,\
 test("backup-parser-bounds-input-size-before-json-work", () => {
 assert.throws(()=>api.parseProgressBackup(' '.repeat(1000001)),RangeError);
 });
+
+test("backup-parse-does-not-require-browser-storage", () => {
+assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(api.normalizeProgress({}))),api.normalizeProgress({}));
+});
