@@ -21,3 +21,7 @@ assert.deepEqual(api.normalizeProgress('bad'),api.normalizeProgress(null));
 test("completion-maps-keep-only-boolean-values", () => {
 assert.deepEqual(api.normalizeProgress({completedLessons:{a:true,b:false,c:1,d:'yes'}}).completedLessons,{a:true,b:false});
 });
+
+test("mastery-implies-completion-without-double-counting", () => {
+const r=api.normalizeProgress({completedLessons:{a:true},masteredLessons:{a:true,b:true}});assert.equal(api.progressSummary(r).completed,2);assert.equal(api.progressSummary(r).mastered,2);
+});
