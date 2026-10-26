@@ -72,3 +72,10 @@ export function markLessonComplete(slug: string, mastered = false): ProgressStat
   }
   return next;
 }
+
+/** Boolean true records count; mastered lessons also count as completed. */
+export function progressSummary(progress: ProgressState) {
+  const mastered = Object.keys(progress.masteredLessons).filter(id => progress.masteredLessons[id] === true);
+  const completed = new Set([...Object.keys(progress.completedLessons).filter(id => progress.completedLessons[id] === true), ...mastered]);
+  return {completed:completed.size,mastered:mastered.length,lastPracticed:progress.lastPracticed,streakDays:progress.streakDays};
+}
