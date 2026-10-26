@@ -89,3 +89,7 @@ const b=JSON.parse(api.serializeProgressBackup(api.normalizeProgress({})));asser
 test("backup-serialization-excludes-unrecognized-fields", () => {
 assert.ok(!api.serializeProgressBackup({...api.normalizeProgress({}),token:'secret'}).includes('secret'));
 });
+
+test("backup-parser-rejects-malformed", () => {
+assert.throws(()=>api.parseProgressBackup("{"));
+});
