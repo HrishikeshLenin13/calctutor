@@ -173,3 +173,7 @@ const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1).toISOString(),st
 test("streak-growth-saturates-at-safe-integer-limit", () => {
 const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1).toISOString(),streakDays:Number.MAX_SAFE_INTEGER});assert.equal(api.practiceStreak(p,new Date(2026,0,2)),Number.MAX_SAFE_INTEGER);
 });
+
+test("server-side-save-reports-unavailable-storage", () => {
+assert.equal(api.saveProgress(api.normalizeProgress({})),false);assert.equal(api.resetProgress(),false);
+});
