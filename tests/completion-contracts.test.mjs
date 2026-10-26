@@ -165,3 +165,7 @@ const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1,8).toISOString(),
 test("consecutive-local-days-grow-a-streak-once", () => {
 const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1,20).toISOString(),streakDays:4});assert.equal(api.practiceStreak(p,new Date(2026,0,2,8)),5);
 });
+
+test("missed-local-days-reset-the-streak", () => {
+const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1).toISOString(),streakDays:4});assert.equal(api.practiceStreak(p,new Date(2026,0,3)),1);
+});
