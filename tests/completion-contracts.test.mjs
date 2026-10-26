@@ -125,3 +125,7 @@ assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(api.normali
 test("merge-keeps-earned-true-flags-over-imported-false", () => {
 const a=api.normalizeProgress({completedLessons:{a:true}}),b=api.normalizeProgress({completedLessons:{a:false}});assert.equal(api.mergeProgress(a,b).completedLessons.a,true);
 });
+
+test("merge-retains-independent-mastered-lessons", () => {
+const a=api.normalizeProgress({masteredLessons:{a:true}}),b=api.normalizeProgress({masteredLessons:{b:true}});assert.equal(api.progressSummary(api.mergeProgress(a,b)).mastered,2);
+});
