@@ -33,3 +33,7 @@ const r=api.normalizeProgress({masteredLessons:{a:false}});assert.equal(api.prog
 test("normalizer-excludes-empty-lesson-ids", () => {
 const r=api.normalizeProgress({completedLessons:Object.fromEntries([["",true]])});assert.deepEqual(r.completedLessons,{});
 });
+
+test("normalizer-excludes-padded-lesson-ids", () => {
+const r=api.normalizeProgress({completedLessons:Object.fromEntries([[" a ",true]])});assert.deepEqual(r.completedLessons,{});
+});
