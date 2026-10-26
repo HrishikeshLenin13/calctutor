@@ -149,3 +149,7 @@ const p=api.normalizeProgress({masteredLessons:{a:true,b:true}}),r=api.withoutLe
 test("unknown-lesson-removal-keeps-practice-metadata", () => {
 const p=api.normalizeProgress({streakDays:4,lastPracticed:'2026-01-01'});assert.deepEqual(api.withoutLessonProgress(p,'missing'),p);
 });
+
+test("import-preview-counts-only-new-completed-lessons", () => {
+const p=api.normalizeProgress({completedLessons:{a:true}}),source=api.serializeProgressBackup(api.normalizeProgress({completedLessons:{a:true,b:true}}));assert.equal(api.previewProgressImport(p,source).addedCompleted,1);
+});
