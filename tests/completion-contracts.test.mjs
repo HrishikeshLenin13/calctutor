@@ -69,3 +69,7 @@ assert.equal(api.normalizeProgress({streakDays:1.5}).streakDays,1);
 test("streak-normalizes-nonfinite-values", () => {
 assert.equal(api.normalizeProgress({streakDays:Infinity}).streakDays,1);
 });
+
+test("streak-normalizes-unsafe-values", () => {
+assert.equal(api.normalizeProgress({streakDays:Number.MAX_SAFE_INTEGER+1}).streakDays,1);
+});
