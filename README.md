@@ -95,3 +95,9 @@ The keypad is original artwork so the keystrokes can be practiced. It is not a c
 ## Independence
 
 CalcTutor is an independent educational project and is not affiliated with, endorsed by, or sponsored by Texas Instruments. TI-84 Plus CE is a trademark of Texas Instruments.
+
+## Practice progress
+
+Lesson completion is stored in this browser. A practice streak increases when you complete a lesson on the next local calendar date, stays unchanged for additional practice that day, and restarts after a gap. It counts calendar days rather than 24-hour windows, so daylight-saving changes do not alter the rule.
+
+Reloading a saved mastered lesson also restores its completed state. Browser storage is best-effort; clearing site data removes local progress. Run `npm test` to check progress normalization and streak behavior alongside the calculator tests.
