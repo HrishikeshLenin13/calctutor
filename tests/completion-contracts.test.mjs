@@ -145,3 +145,7 @@ const a=api.normalizeProgress({completedLessons:{a:true}}),b=api.normalizeProgre
 test("lesson-removal-clears-mastery-and-completion-together", () => {
 const p=api.normalizeProgress({masteredLessons:{a:true,b:true}}),r=api.withoutLessonProgress(p,'a');assert.equal(r.masteredLessons.a,undefined);assert.equal(r.completedLessons.a,undefined);assert.equal(p.masteredLessons.a,true);
 });
+
+test("unknown-lesson-removal-keeps-practice-metadata", () => {
+const p=api.normalizeProgress({streakDays:4,lastPracticed:'2026-01-01'});assert.deepEqual(api.withoutLessonProgress(p,'missing'),p);
+});
