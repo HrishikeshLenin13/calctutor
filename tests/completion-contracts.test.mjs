@@ -93,3 +93,7 @@ assert.ok(!api.serializeProgressBackup({...api.normalizeProgress({}),token:'secr
 test("backup-parser-rejects-malformed", () => {
 assert.throws(()=>api.parseProgressBackup("{"));
 });
+
+test("backup-parser-rejects-null", () => {
+assert.throws(()=>api.parseProgressBackup("null"));
+});
