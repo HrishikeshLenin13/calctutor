@@ -107,3 +107,12 @@ export function saveProgress(progress: ProgressState): boolean {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeProgress(progress))); return true; }
   catch { return false; }
 }
+
+/** Monotone lesson merge; practice metadata follows the latest valid practice. */
+export function mergeProgress(current: ProgressState, imported: ProgressState): ProgressState {
+  const a = normalizeProgress(current), b = normalizeProgress(imported);
+  const mergeFlags = (left: Record<string,boolean>, right: Record<string,boolean>) =>
+    Object.fromEntries([...new Set([...Object.keys(left), ...Object.keys(right)])].map(id => [id, left[id] === true || right[id] === true]));
+  const latest = b.lastPracticed && (!a.lastPracticed || Date.parse(b.lastPracticed) > Date.parse(a.lastPracticed)) ? b : a;
+  return normalizeProgress({...latest, completedLessons:mergeFlags(a.completedLessons,b.completedLessons), masteredLessons:mergeFlags(a.masteredLessons,b.masteredLessons)});
+}
