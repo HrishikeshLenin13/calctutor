@@ -88,3 +88,12 @@ export function normalizeProgress(value: unknown): ProgressState {
 export function serializeProgressBackup(progress: ProgressState): string {
   return JSON.stringify({format:"calctutor-progress",version:1,progress:normalizeProgress(progress)}, null, 2) + "\n";
 }
+
+export function parseProgressBackup(source: string): ProgressState {
+  if (source.length > 1_000_000) throw new RangeError("Progress backup is too large.");
+  const value: unknown = JSON.parse(source);
+  if (!value || typeof value !== "object" || !("format" in value) || value.format !== "calctutor-progress" || !("version" in value) || value.version !== 1 || !("progress" in value) || !value.progress || typeof value.progress !== "object" || Array.isArray(value.progress)) {
+    throw new TypeError("Use a version 1 CalcTutor progress backup.");
+  }
+  return normalizeProgress(value.progress);
+}
