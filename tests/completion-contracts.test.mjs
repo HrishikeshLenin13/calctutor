@@ -97,3 +97,7 @@ assert.throws(()=>api.parseProgressBackup("{"));
 test("backup-parser-rejects-null", () => {
 assert.throws(()=>api.parseProgressBackup("null"));
 });
+
+test("backup-parser-rejects-array", () => {
+assert.throws(()=>api.parseProgressBackup("[]"));
+});
