@@ -61,3 +61,7 @@ const r=api.normalizeProgress({masteredLessons:{a:true},streakDays:4});assert.de
 test("streak-normalizes-negative-values", () => {
 assert.equal(api.normalizeProgress({streakDays:-1}).streakDays,1);
 });
+
+test("streak-normalizes-fractional-values", () => {
+assert.equal(api.normalizeProgress({streakDays:1.5}).streakDays,1);
+});
