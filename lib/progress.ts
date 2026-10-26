@@ -123,3 +123,11 @@ export function withoutLessonProgress(progress: ProgressState, slug: string): Pr
   delete next.completedLessons[slug]; delete next.masteredLessons[slug];
   return next;
 }
+
+/** Preview a merge without any browser storage access. */
+export function previewProgressImport(current: ProgressState, source: string) {
+  const before = normalizeProgress(current);
+  const next = mergeProgress(before, parseProgressBackup(source));
+  const oldSummary = progressSummary(before), summary = progressSummary(next);
+  return {progress:next, summary, addedCompleted:summary.completed-oldSummary.completed, addedMastered:summary.mastered-oldSummary.mastered};
+}

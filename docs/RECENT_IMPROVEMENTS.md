@@ -33,3 +33,7 @@ Run from the repository root:
 npm test && npx tsc --noEmit
 ```
 
+
+## Progress integration APIs
+
+`saveProgress` normalizes and reports persistence success. `mergeProgress` combines true lesson flags without overwriting earned progress; practice time and streak metadata follow the latest valid practice. `withoutLessonProgress` removes both completion and mastery for one lesson, purely in memory. `previewProgressImport` validates a versioned backup and returns a merged preview plus added counts without writing storage. These are explicit integration APIs, not new UI controls. Restored maps reject unsafe or malformed lesson IDs.
