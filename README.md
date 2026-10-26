@@ -105,3 +105,7 @@ Reloading a saved mastered lesson also restores its completed state. Browser sto
 ## Framework maintenance
 
 The Next.js runtime and its ESLint configuration use matching pinned releases. Install from `package-lock.json` with `npm ci`, then run `npm test` and `npm run build` to check the calculator lessons and generated routes after dependency updates.
+
+## Developer resources
+
+- [Feature usage and API contracts](docs/RECENT_IMPROVEMENTS.md)
