@@ -34,12 +34,12 @@ export function practiceStreak(previous: ProgressState, now = new Date()): numbe
   const day = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
   const gap = (day(now) - day(new Date(previous.lastPracticed))) / 86_400_000;
   if (gap === 0) return previous.streakDays;
-  return gap === 1 ? previous.streakDays + 1 : 1;
+  return gap === 1 ? Math.min(Number.MAX_SAFE_INTEGER, previous.streakDays + 1) : 1;
 }
 
-export function markLessonComplete(slug: string, mastered = false): ProgressState {
+export function markLessonComplete(slug: string, mastered = false, now = new Date()): ProgressState {
+  if (!slug || slug.trim() !== slug || slug.length > 160 || !Number.isFinite(now.getTime())) throw new TypeError("Use a lesson ID and a valid practice date.");
   const current = getProgress();
-  const now = new Date();
   const next: ProgressState = {
     ...current,
     streakDays: practiceStreak(current, now),
