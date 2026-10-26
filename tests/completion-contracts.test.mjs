@@ -105,3 +105,7 @@ assert.throws(()=>api.parseProgressBackup("[]"));
 test("backup-parser-rejects-unknown-version", () => {
 assert.throws(()=>api.parseProgressBackup("{\"format\":\"calctutor-progress\",\"version\":2,\"progress\":{}}"));
 });
+
+test("backup-parser-rejects-missing-progress", () => {
+assert.throws(()=>api.parseProgressBackup("{\"format\":\"calctutor-progress\",\"version\":1}"));
+});
