@@ -19,23 +19,7 @@ export function getProgress(): ProgressState {
       const value: unknown = JSON.parse(raw);
       if (value && typeof value === "object" && !Array.isArray(value)) {
         const saved = value as Record<string, unknown>;
-        const lessons = (input: unknown): Record<string, boolean> =>
-          input && typeof input === "object" && !Array.isArray(input)
-            ? Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "boolean"))
-            : {};
-        const completedLessons = lessons(saved.completedLessons);
-        const masteredLessons = lessons(saved.masteredLessons);
-        for (const [slug, mastered] of Object.entries(masteredLessons)) {
-          if (mastered) completedLessons[slug] = true;
-        }
-        return {
-          completedLessons,
-          masteredLessons,
-          lastPracticed: typeof saved.lastPracticed === "string" && Number.isFinite(Date.parse(saved.lastPracticed))
-            ? saved.lastPracticed : null,
-          streakDays: typeof saved.streakDays === "number" && Number.isSafeInteger(saved.streakDays) && saved.streakDays >= 1
-            ? saved.streakDays : 1,
-        };
+        return normalizeProgress(saved);
       }
     }
   } catch {
@@ -78,4 +62,29 @@ export function progressSummary(progress: ProgressState) {
   const mastered = Object.keys(progress.masteredLessons).filter(id => progress.masteredLessons[id] === true);
   const completed = new Set([...Object.keys(progress.completedLessons).filter(id => progress.completedLessons[id] === true), ...mastered]);
   return {completed:completed.size,mastered:mastered.length,lastPracticed:progress.lastPracticed,streakDays:progress.streakDays};
+}
+
+export function normalizeProgress(value: unknown): ProgressState {
+  const saved = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string,unknown> : {};
+  const lessons = (input: unknown): Record<string, boolean> =>
+    input && typeof input === "object" && !Array.isArray(input)
+      ? Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "boolean"))
+      : {};
+  const completedLessons = lessons(saved.completedLessons);
+  const masteredLessons = lessons(saved.masteredLessons);
+  for (const [slug, mastered] of Object.entries(masteredLessons)) {
+    if (mastered) completedLessons[slug] = true;
+  }
+  return {
+    completedLessons,
+    masteredLessons,
+    lastPracticed: typeof saved.lastPracticed === "string" && Number.isFinite(Date.parse(saved.lastPracticed))
+      ? saved.lastPracticed : null,
+    streakDays: typeof saved.streakDays === "number" && Number.isSafeInteger(saved.streakDays) && saved.streakDays >= 1
+      ? saved.streakDays : 1,
+  };
+}
+
+export function serializeProgressBackup(progress: ProgressState): string {
+  return JSON.stringify({format:"calctutor-progress",version:1,progress:normalizeProgress(progress)}, null, 2) + "\n";
 }
