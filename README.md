@@ -109,3 +109,4 @@ The Next.js runtime and its ESLint configuration use matching pinned releases. I
 ## Developer resources
 
 - [Feature usage and API contracts](docs/RECENT_IMPROVEMENTS.md)
+- [Troubleshooting and recovery](docs/TROUBLESHOOTING.md)
