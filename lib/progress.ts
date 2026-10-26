@@ -66,9 +66,10 @@ export function progressSummary(progress: ProgressState) {
 
 export function normalizeProgress(value: unknown): ProgressState {
   const saved = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string,unknown> : {};
+  const validId = (id: string) => id.length > 0 && id.length <= 160 && id.trim() === id && !['__proto__', 'constructor', 'prototype'].includes(id);
   const lessons = (input: unknown): Record<string, boolean> =>
     input && typeof input === "object" && !Array.isArray(input)
-      ? Object.fromEntries(Object.entries(input).filter(([, v]) => typeof v === "boolean"))
+      ? Object.fromEntries(Object.entries(input).filter(([id, v]) => validId(id) && typeof v === "boolean"))
       : {};
   const completedLessons = lessons(saved.completedLessons);
   const masteredLessons = lessons(saved.masteredLessons);
