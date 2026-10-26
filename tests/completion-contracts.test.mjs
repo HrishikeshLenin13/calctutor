@@ -65,3 +65,7 @@ assert.equal(api.normalizeProgress({streakDays:-1}).streakDays,1);
 test("streak-normalizes-fractional-values", () => {
 assert.equal(api.normalizeProgress({streakDays:1.5}).streakDays,1);
 });
+
+test("streak-normalizes-nonfinite-values", () => {
+assert.equal(api.normalizeProgress({streakDays:Infinity}).streakDays,1);
+});
