@@ -49,11 +49,7 @@ export function markLessonComplete(slug: string, mastered = false, now = new Dat
       : current.masteredLessons,
     lastPracticed: now.toISOString(),
   };
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    /* ignore storage errors */
-  }
+  saveProgress(next);
   return next;
 }
 
@@ -103,4 +99,11 @@ export function parseProgressBackup(source: string): ProgressState {
 export function resetProgress(): boolean {
   if (typeof window === "undefined") return false;
   try { localStorage.removeItem(STORAGE_KEY); return true; } catch { return false; }
+}
+
+/** Persist only normalized progress and report blocked or unavailable storage. */
+export function saveProgress(progress: ProgressState): boolean {
+  if (typeof window === "undefined") return false;
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizeProgress(progress))); return true; }
+  catch { return false; }
 }
