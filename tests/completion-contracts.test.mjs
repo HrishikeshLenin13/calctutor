@@ -109,3 +109,7 @@ assert.throws(()=>api.parseProgressBackup("{\"format\":\"calctutor-progress\",\"
 test("backup-parser-rejects-missing-progress", () => {
 assert.throws(()=>api.parseProgressBackup("{\"format\":\"calctutor-progress\",\"version\":1}"));
 });
+
+test("backup-parser-rejects-wrong-format", () => {
+assert.throws(()=>api.parseProgressBackup("{\"format\":\"other\",\"version\":1,\"progress\":{}}"));
+});
