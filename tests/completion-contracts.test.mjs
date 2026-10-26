@@ -133,3 +133,7 @@ const a=api.normalizeProgress({masteredLessons:{a:true}}),b=api.normalizeProgres
 test("merge-selects-latest-practice-metadata-not-largest-streak", () => {
 const a=api.normalizeProgress({lastPracticed:'2026-01-01',streakDays:9}),b=api.normalizeProgress({lastPracticed:'2026-02-01',streakDays:2});assert.equal(api.mergeProgress(a,b).streakDays,2);
 });
+
+test("merge-does-not-replace-newer-local-metadata", () => {
+const a=api.normalizeProgress({lastPracticed:'2026-02-01',streakDays:2}),b=api.normalizeProgress({lastPracticed:'2026-01-01',streakDays:9});assert.equal(api.mergeProgress(a,b).streakDays,2);
+});
