@@ -29,3 +29,7 @@ const r=api.normalizeProgress({completedLessons:{a:true},masteredLessons:{a:true
 test("false-mastery-does-not-imply-completion", () => {
 const r=api.normalizeProgress({masteredLessons:{a:false}});assert.equal(api.progressSummary(r).completed,0);assert.equal(api.progressSummary(r).mastered,0);
 });
+
+test("normalizer-excludes-empty-lesson-ids", () => {
+const r=api.normalizeProgress({completedLessons:Object.fromEntries([["",true]])});assert.deepEqual(r.completedLessons,{});
+});
