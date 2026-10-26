@@ -17,3 +17,7 @@ assert.deepEqual(api.normalizeProgress(3),api.normalizeProgress(null));
 test("nonobject-text-progress-is-not-a-record", () => {
 assert.deepEqual(api.normalizeProgress('bad'),api.normalizeProgress(null));
 });
+
+test("completion-maps-keep-only-boolean-values", () => {
+assert.deepEqual(api.normalizeProgress({completedLessons:{a:true,b:false,c:1,d:'yes'}}).completedLessons,{a:true,b:false});
+});
