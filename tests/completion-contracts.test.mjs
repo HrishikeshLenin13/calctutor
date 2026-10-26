@@ -41,3 +41,7 @@ const r=api.normalizeProgress({completedLessons:Object.fromEntries([[" a ",true]
 test("normalizer-excludes-oversized-lesson-ids", () => {
 const r=api.normalizeProgress({completedLessons:Object.fromEntries([["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",true]])});assert.deepEqual(r.completedLessons,{});
 });
+
+test("normalizer-excludes-prototype-lesson-ids", () => {
+const r=api.normalizeProgress({completedLessons:Object.fromEntries([["__proto__",true]])});assert.deepEqual(r.completedLessons,{});
+});
