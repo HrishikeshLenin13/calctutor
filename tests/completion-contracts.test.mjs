@@ -169,3 +169,7 @@ const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1,20).toISOString()
 test("missed-local-days-reset-the-streak", () => {
 const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1).toISOString(),streakDays:4});assert.equal(api.practiceStreak(p,new Date(2026,0,3)),1);
 });
+
+test("streak-growth-saturates-at-safe-integer-limit", () => {
+const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1).toISOString(),streakDays:Number.MAX_SAFE_INTEGER});assert.equal(api.practiceStreak(p,new Date(2026,0,2)),Number.MAX_SAFE_INTEGER);
+});
