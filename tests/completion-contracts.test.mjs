@@ -45,3 +45,7 @@ const r=api.normalizeProgress({completedLessons:Object.fromEntries([["xxxxxxxxxx
 test("normalizer-excludes-prototype-lesson-ids", () => {
 const r=api.normalizeProgress({completedLessons:Object.fromEntries([["__proto__",true]])});assert.deepEqual(r.completedLessons,{});
 });
+
+test("normalizer-excludes-constructor-lesson-ids", () => {
+const r=api.normalizeProgress({completedLessons:Object.fromEntries([["constructor",true]])});assert.deepEqual(r.completedLessons,{});
+});
