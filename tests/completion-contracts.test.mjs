@@ -49,3 +49,7 @@ const r=api.normalizeProgress({completedLessons:Object.fromEntries([["__proto__"
 test("normalizer-excludes-constructor-lesson-ids", () => {
 const r=api.normalizeProgress({completedLessons:Object.fromEntries([["constructor",true]])});assert.deepEqual(r.completedLessons,{});
 });
+
+test("normalization-does-not-alias-input-maps", () => {
+const raw={completedLessons:{a:true}},r=api.normalizeProgress(raw);r.completedLessons.a=false;assert.equal(raw.completedLessons.a,true);
+});
