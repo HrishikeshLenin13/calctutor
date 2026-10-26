@@ -53,3 +53,7 @@ const r=api.normalizeProgress({completedLessons:Object.fromEntries([["constructo
 test("normalization-does-not-alias-input-maps", () => {
 const raw={completedLessons:{a:true}},r=api.normalizeProgress(raw);r.completedLessons.a=false;assert.equal(raw.completedLessons.a,true);
 });
+
+test("normalization-is-idempotent-for-valid-progress", () => {
+const r=api.normalizeProgress({masteredLessons:{a:true},streakDays:4});assert.deepEqual(api.normalizeProgress(r),r);
+});
