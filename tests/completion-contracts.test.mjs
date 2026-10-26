@@ -113,3 +113,7 @@ assert.throws(()=>api.parseProgressBackup("{\"format\":\"calctutor-progress\",\"
 test("backup-parser-rejects-wrong-format", () => {
 assert.throws(()=>api.parseProgressBackup("{\"format\":\"other\",\"version\":1,\"progress\":{}}"));
 });
+
+test("backup-parser-bounds-input-size-before-json-work", () => {
+assert.throws(()=>api.parseProgressBackup(' '.repeat(1000001)),RangeError);
+});
