@@ -81,3 +81,7 @@ for(const lastPracticed of ['bad','',123])assert.equal(api.normalizeProgress({la
 test("valid-practice-time-survives-backup-normalization", () => {
 const r=api.normalizeProgress({lastPracticed:'2026-01-01T12:00:00Z'});assert.equal(api.parseProgressBackup(api.serializeProgressBackup(r)).lastPracticed,r.lastPracticed);
 });
+
+test("backup-envelope-has-explicit-format-and-version", () => {
+const b=JSON.parse(api.serializeProgressBackup(api.normalizeProgress({})));assert.equal(b.format,'calctutor-progress');assert.equal(b.version,1);
+});
