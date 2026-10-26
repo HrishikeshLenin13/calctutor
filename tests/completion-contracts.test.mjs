@@ -25,3 +25,7 @@ assert.deepEqual(api.normalizeProgress({completedLessons:{a:true,b:false,c:1,d:'
 test("mastery-implies-completion-without-double-counting", () => {
 const r=api.normalizeProgress({completedLessons:{a:true},masteredLessons:{a:true,b:true}});assert.equal(api.progressSummary(r).completed,2);assert.equal(api.progressSummary(r).mastered,2);
 });
+
+test("false-mastery-does-not-imply-completion", () => {
+const r=api.normalizeProgress({masteredLessons:{a:false}});assert.equal(api.progressSummary(r).completed,0);assert.equal(api.progressSummary(r).mastered,0);
+});
