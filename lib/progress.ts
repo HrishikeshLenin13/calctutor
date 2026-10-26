@@ -116,3 +116,10 @@ export function mergeProgress(current: ProgressState, imported: ProgressState): 
   const latest = b.lastPracticed && (!a.lastPracticed || Date.parse(b.lastPracticed) > Date.parse(a.lastPracticed)) ? b : a;
   return normalizeProgress({...latest, completedLessons:mergeFlags(a.completedLessons,b.completedLessons), masteredLessons:mergeFlags(a.masteredLessons,b.masteredLessons)});
 }
+
+/** Pure removal; callers explicitly decide whether to save the returned state. */
+export function withoutLessonProgress(progress: ProgressState, slug: string): ProgressState {
+  const next = normalizeProgress(progress);
+  delete next.completedLessons[slug]; delete next.masteredLessons[slug];
+  return next;
+}
