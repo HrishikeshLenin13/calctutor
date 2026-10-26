@@ -121,3 +121,7 @@ assert.throws(()=>api.parseProgressBackup(' '.repeat(1000001)),RangeError);
 test("backup-parse-does-not-require-browser-storage", () => {
 assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(api.normalizeProgress({}))),api.normalizeProgress({}));
 });
+
+test("merge-keeps-earned-true-flags-over-imported-false", () => {
+const a=api.normalizeProgress({completedLessons:{a:true}}),b=api.normalizeProgress({completedLessons:{a:false}});assert.equal(api.mergeProgress(a,b).completedLessons.a,true);
+});
