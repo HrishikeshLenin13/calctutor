@@ -73,3 +73,7 @@ assert.equal(api.normalizeProgress({streakDays:Infinity}).streakDays,1);
 test("streak-normalizes-unsafe-values", () => {
 assert.equal(api.normalizeProgress({streakDays:Number.MAX_SAFE_INTEGER+1}).streakDays,1);
 });
+
+test("invalid-practice-dates-are-not-preserved", () => {
+for(const lastPracticed of ['bad','',123])assert.equal(api.normalizeProgress({lastPracticed}).lastPracticed,null);
+});
