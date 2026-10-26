@@ -177,3 +177,7 @@ const p=api.normalizeProgress({lastPracticed:new Date(2026,0,1).toISOString(),st
 test("server-side-save-reports-unavailable-storage", () => {
 assert.equal(api.saveProgress(api.normalizeProgress({})),false);assert.equal(api.resetProgress(),false);
 });
+
+test("empty-summary-does-not-count-false-flags", () => {
+assert.deepEqual(api.progressSummary(api.normalizeProgress({completedLessons:{a:false},masteredLessons:{b:false}})),{completed:0,mastered:0,lastPracticed:null,streakDays:1});
+});
