@@ -241,3 +241,7 @@ const p=api.normalizeProgress({streakDays:1.1,masteredLessons:{a:true},completed
 test("invalid-streak-normalizes-large-fraction", () => {
 const p=api.normalizeProgress({streakDays:100.01,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
 });
+
+test("merge-union-pattern-1", () => {
+const a=api.normalizeProgress({completedLessons:{"a0": true},lastPracticed:'2026-01-01T00:00:00Z',streakDays:3});const b=api.normalizeProgress({completedLessons:{"a0": true},lastPracticed:'2026-01-02T00:00:00Z',streakDays:4});const snapshot=JSON.stringify([a,b]);const merged=api.mergeProgress(a,b);assert.deepEqual(merged.completedLessons,{"a0": true});assert.equal(merged.streakDays,4);assert.deepEqual(api.mergeProgress(merged,merged),merged);assert.equal(JSON.stringify([a,b]),snapshot);
+});
