@@ -21,3 +21,7 @@ const input=api.normalizeProgress({completedLessons:{["\u00e9cole"]:true},master
 test("lesson-id-roundtrip-5", () => {
 const input=api.normalizeProgress({completedLessons:{["\u5b66\u7fd2"]:true},masteredLessons:{["\u5b66\u7fd2"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"\u5b66\u7fd2").completedLessons,{});assert.equal(input.completedLessons["\u5b66\u7fd2"],true);
 });
+
+test("lesson-id-roundtrip-6", () => {
+const input=api.normalizeProgress({completedLessons:{["\ud83d\udcda"]:true},masteredLessons:{["\ud83d\udcda"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"\ud83d\udcda").completedLessons,{});assert.equal(input.completedLessons["\ud83d\udcda"],true);
+});
