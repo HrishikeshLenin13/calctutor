@@ -205,3 +205,7 @@ const p=api.normalizeProgress({streakDays:Infinity,masteredLessons:{a:true},comp
 test("invalid-streak-normalizes-negative-infinity", () => {
 const p=api.normalizeProgress({streakDays:-Infinity,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
 });
+
+test("invalid-streak-normalizes-text", () => {
+const p=api.normalizeProgress({streakDays:'2',masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
+});
