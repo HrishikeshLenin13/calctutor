@@ -193,3 +193,7 @@ const p=api.normalizeProgress({streakDays:0,masteredLessons:{a:true},completedLe
 test("invalid-streak-normalizes-fractional", () => {
 const p=api.normalizeProgress({streakDays:.5,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
 });
+
+test("invalid-streak-normalizes-nan", () => {
+const p=api.normalizeProgress({streakDays:NaN,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
+});
