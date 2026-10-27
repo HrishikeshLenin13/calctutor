@@ -45,3 +45,7 @@ const input=api.normalizeProgress({completedLessons:{["a_b"]:true},masteredLesso
 test("lesson-id-roundtrip-11", () => {
 const input=api.normalizeProgress({completedLessons:{["A"]:true},masteredLessons:{["A"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"A").completedLessons,{});assert.equal(input.completedLessons["A"],true);
 });
+
+test("lesson-id-roundtrip-12", () => {
+const input=api.normalizeProgress({completedLessons:{["0"]:true},masteredLessons:{["0"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"0").completedLessons,{});assert.equal(input.completedLessons["0"],true);
+});
