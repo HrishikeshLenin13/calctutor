@@ -221,3 +221,7 @@ const p=api.normalizeProgress({streakDays:true,masteredLessons:{a:true},complete
 test("invalid-streak-normalizes-array", () => {
 const p=api.normalizeProgress({streakDays:[],masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
 });
+
+test("invalid-streak-normalizes-object", () => {
+const p=api.normalizeProgress({streakDays:{},masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
+});
