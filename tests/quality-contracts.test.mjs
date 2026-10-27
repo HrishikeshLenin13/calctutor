@@ -265,3 +265,7 @@ const a=api.normalizeProgress({completedLessons:{"a0": true, "a1": false, "a2": 
 test("merge-union-pattern-6", () => {
 const a=api.normalizeProgress({completedLessons:{"a0": true},lastPracticed:'2026-01-01T00:00:00Z',streakDays:3});const b=api.normalizeProgress({completedLessons:{"a0": true, "a1": false, "a2": false, "a3": true, "a4": false, "a5": false},lastPracticed:'2026-01-02T00:00:00Z',streakDays:4});const snapshot=JSON.stringify([a,b]);const merged=api.mergeProgress(a,b);assert.deepEqual(merged.completedLessons,{"a0": true, "a5": false, "a3": true, "a2": false, "a1": false, "a4": false});assert.equal(merged.streakDays,4);assert.deepEqual(api.mergeProgress(merged,merged),merged);assert.equal(JSON.stringify([a,b]),snapshot);
 });
+
+test("merge-union-pattern-7", () => {
+const a=api.normalizeProgress({completedLessons:{"a0": true, "a1": false},lastPracticed:'2026-01-01T00:00:00Z',streakDays:3});const b=api.normalizeProgress({completedLessons:{"a0": true, "a1": false, "a2": false, "a3": true, "a4": false, "a5": false, "a6": true},lastPracticed:'2026-01-02T00:00:00Z',streakDays:4});const snapshot=JSON.stringify([a,b]);const merged=api.mergeProgress(a,b);assert.deepEqual(merged.completedLessons,{"a0": true, "a5": false, "a6": true, "a3": true, "a2": false, "a1": false, "a4": false});assert.equal(merged.streakDays,4);assert.deepEqual(api.mergeProgress(merged,merged),merged);assert.equal(JSON.stringify([a,b]),snapshot);
+});
