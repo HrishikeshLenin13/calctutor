@@ -89,3 +89,7 @@ const flags=Object.fromEntries([["x ",true],['valid',true]]);const normalized=ap
 test("rejected-lesson-key-7", () => {
 const flags=Object.fromEntries([["\tx",true],['valid',true]]);const normalized=api.normalizeProgress({completedLessons:flags,masteredLessons:flags});assert.deepEqual(Object.keys(normalized.completedLessons),['valid']);assert.deepEqual(Object.keys(normalized.masteredLessons),['valid']);assert.equal(api.progressSummary(normalized).completed,1);
 });
+
+test("rejected-lesson-key-8", () => {
+const flags=Object.fromEntries([["x\n",true],['valid',true]]);const normalized=api.normalizeProgress({completedLessons:flags,masteredLessons:flags});assert.deepEqual(Object.keys(normalized.completedLessons),['valid']);assert.deepEqual(Object.keys(normalized.masteredLessons),['valid']);assert.equal(api.progressSummary(normalized).completed,1);
+});
