@@ -201,3 +201,7 @@ const p=api.normalizeProgress({streakDays:NaN,masteredLessons:{a:true},completed
 test("invalid-streak-normalizes-infinity", () => {
 const p=api.normalizeProgress({streakDays:Infinity,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
 });
+
+test("invalid-streak-normalizes-negative-infinity", () => {
+const p=api.normalizeProgress({streakDays:-Infinity,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
+});
