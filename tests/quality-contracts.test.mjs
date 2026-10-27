@@ -9,3 +9,7 @@ const input=api.normalizeProgress({completedLessons:{["algebra"]:true},masteredL
 test("lesson-id-roundtrip-2", () => {
 const input=api.normalizeProgress({completedLessons:{["a/b"]:true},masteredLessons:{["a/b"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"a/b").completedLessons,{});assert.equal(input.completedLessons["a/b"],true);
 });
+
+test("lesson-id-roundtrip-3", () => {
+const input=api.normalizeProgress({completedLessons:{["level 1"]:true},masteredLessons:{["level 1"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"level 1").completedLessons,{});assert.equal(input.completedLessons["level 1"],true);
+});
