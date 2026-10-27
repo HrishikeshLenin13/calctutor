@@ -157,3 +157,7 @@ const before=api.normalizeProgress({completedLessons:{keep:true}});assert.throws
 test("backup-envelope-rejection-9", () => {
 const before=api.normalizeProgress({completedLessons:{keep:true}});assert.throws(()=>api.previewProgressImport(before,"{\"format\":\"calctutor-progress\",\"version\":\"1\",\"progress\":{}}"));assert.deepEqual(before.completedLessons,{keep:true});
 });
+
+test("backup-envelope-rejection-10", () => {
+const before=api.normalizeProgress({completedLessons:{keep:true}});assert.throws(()=>api.previewProgressImport(before,"{\"format\":\"calctutor-progress\",\"version\":true,\"progress\":{}}"));assert.deepEqual(before.completedLessons,{keep:true});
+});
