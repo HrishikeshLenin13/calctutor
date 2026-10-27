@@ -237,3 +237,7 @@ const p=api.normalizeProgress({streakDays:Number.MAX_SAFE_INTEGER+1,masteredLess
 test("invalid-streak-normalizes-positive-fraction", () => {
 const p=api.normalizeProgress({streakDays:1.1,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
 });
+
+test("invalid-streak-normalizes-large-fraction", () => {
+const p=api.normalizeProgress({streakDays:100.01,masteredLessons:{a:true},completedLessons:{a:false}});assert.equal(p.streakDays,1);assert.equal(p.completedLessons.a,true);assert.deepEqual(api.parseProgressBackup(api.serializeProgressBackup(p)),p);
+});
