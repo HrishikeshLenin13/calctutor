@@ -125,3 +125,7 @@ const flags=Object.fromEntries([["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 test("backup-envelope-rejection-1", () => {
 const before=api.normalizeProgress({completedLessons:{keep:true}});assert.throws(()=>api.previewProgressImport(before,"null"));assert.deepEqual(before.completedLessons,{keep:true});
 });
+
+test("backup-envelope-rejection-2", () => {
+const before=api.normalizeProgress({completedLessons:{keep:true}});assert.throws(()=>api.previewProgressImport(before,"[]"));assert.deepEqual(before.completedLessons,{keep:true});
+});
