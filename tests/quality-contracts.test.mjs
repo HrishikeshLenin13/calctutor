@@ -61,3 +61,7 @@ const input=api.normalizeProgress({completedLessons:{["x#one"]:true},masteredLes
 test("lesson-id-roundtrip-15", () => {
 const input=api.normalizeProgress({completedLessons:{["x?one"]:true},masteredLessons:{["x?one"]:true},streakDays:2});const restored=api.parseProgressBackup(api.serializeProgressBackup(input));assert.deepEqual(restored,input);assert.deepEqual(api.progressSummary(restored),{completed:1,mastered:1,lastPracticed:null,streakDays:2});assert.deepEqual(api.withoutLessonProgress(restored,"x?one").completedLessons,{});assert.equal(input.completedLessons["x?one"],true);
 });
+
+test("rejected-lesson-key-1", () => {
+const flags=Object.fromEntries([["",true],['valid',true]]);const normalized=api.normalizeProgress({completedLessons:flags,masteredLessons:flags});assert.deepEqual(Object.keys(normalized.completedLessons),['valid']);assert.deepEqual(Object.keys(normalized.masteredLessons),['valid']);assert.equal(api.progressSummary(normalized).completed,1);
+});
