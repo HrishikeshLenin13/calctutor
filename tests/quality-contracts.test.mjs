@@ -109,3 +109,7 @@ const flags=Object.fromEntries([["__proto__",true],['valid',true]]);const normal
 test("rejected-lesson-key-12", () => {
 const flags=Object.fromEntries([["constructor",true],['valid',true]]);const normalized=api.normalizeProgress({completedLessons:flags,masteredLessons:flags});assert.deepEqual(Object.keys(normalized.completedLessons),['valid']);assert.deepEqual(Object.keys(normalized.masteredLessons),['valid']);assert.equal(api.progressSummary(normalized).completed,1);
 });
+
+test("rejected-lesson-key-13", () => {
+const flags=Object.fromEntries([["prototype",true],['valid',true]]);const normalized=api.normalizeProgress({completedLessons:flags,masteredLessons:flags});assert.deepEqual(Object.keys(normalized.completedLessons),['valid']);assert.deepEqual(Object.keys(normalized.masteredLessons),['valid']);assert.equal(api.progressSummary(normalized).completed,1);
+});
